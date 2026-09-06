@@ -31,7 +31,7 @@ jobs:
       run: dotnet restore BluetoothBatteryMonitor.sln
 
     - name: Run Test Suite
-      run: dotnet test BluetoothBatteryMonitor.sln -c Release --no-restore --verbosity normal
+      run: dotnet test BluetoothBatteryMonitor.sln -c Release --no-restore --verbosity normal --logger "console;verbosity=detailed"
 
     - name: Publish Single-File Executable
       run: >

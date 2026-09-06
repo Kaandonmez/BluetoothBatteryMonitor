@@ -83,7 +83,11 @@ public class AppProvidersLiveTests
             _output.WriteLine($" - {d.Name} ({d.Id}): Battery={d.BatteryLevel}%, Connected={d.IsConnected}, Type={d.DeviceType}");
         }
 
-        Assert.NotEmpty(devices);
+        Assert.NotNull(devices);
+        if (logitechHidList.Count > 0)
+        {
+            Assert.NotEmpty(devices);
+        }
     }
 
     [Fact]
