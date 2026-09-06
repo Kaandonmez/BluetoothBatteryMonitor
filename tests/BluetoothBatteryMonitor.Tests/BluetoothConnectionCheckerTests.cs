@@ -30,10 +30,10 @@ public class BluetoothConnectionCheckerTests
     {
         var model = new AppDevice();
         Assert.False(model.IsConnected, "BluetoothDeviceModel varsayılan olarak IsConnected = false olmalıdır.");
-        Assert.Equal("Bağlı Değil", model.ConnectionStatusText);
+        Assert.Equal("Disconnected", model.ConnectionStatusText);
 
         model.IsConnected = true;
-        Assert.Equal("Bağlı", model.ConnectionStatusText);
+        Assert.Equal("Connected", model.ConnectionStatusText);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class BluetoothConnectionCheckerTests
 
         var vmDisconnected = new AppItemVM(disconnectedModel);
         Assert.False(vmDisconnected.IsConnected);
-        Assert.Equal("Bağlı Değil", vmDisconnected.ConnectionStatusText);
+        Assert.Equal("Disconnected", vmDisconnected.ConnectionStatusText);
 
         var connectedModel = new AppDevice
         {
@@ -63,7 +63,7 @@ public class BluetoothConnectionCheckerTests
 
         var vmConnected = new AppItemVM(connectedModel);
         Assert.True(vmConnected.IsConnected);
-        Assert.Equal("Bağlı", vmConnected.ConnectionStatusText);
+        Assert.Equal("Connected", vmConnected.ConnectionStatusText);
     }
 
     [Fact]

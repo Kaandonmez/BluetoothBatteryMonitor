@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using BluetoothBatteryMonitor.App.Models;
 using BluetoothBatteryMonitor.App.Services.System;
+using BluetoothBatteryMonitor.App.Services.Localization;
 
 namespace BluetoothBatteryMonitor.App.ViewModels;
 
@@ -19,24 +20,43 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly IEnumerable<BluetoothDeviceModel>? _knownDevices;
 
-    public static IReadOnlyList<ThresholdOption> AvailableThresholds { get; } = new[]
-    {
-        new ThresholdOption(0, "Varsayılan (Global)"),
-        new ThresholdOption(10, "%10 (Fare / Düşük)"),
-        new ThresholdOption(15, "%15"),
-        new ThresholdOption(20, "%20 (Standart)"),
-        new ThresholdOption(25, "%25"),
-        new ThresholdOption(30, "%30"),
-        new ThresholdOption(40, "%40 (Erken Uyarı)")
-    };
+    public static IReadOnlyList<ThresholdOption> AvailableThresholds => LocalizationService.CurrentLanguage == "tr"
+        ? new[]
+        {
+            new ThresholdOption(0, "Varsayılan (Global)"),
+            new ThresholdOption(10, "%10 (Fare / Düşük)"),
+            new ThresholdOption(15, "%15"),
+            new ThresholdOption(20, "%20 (Standart)"),
+            new ThresholdOption(25, "%25"),
+            new ThresholdOption(30, "%30"),
+            new ThresholdOption(40, "%40 (Erken Uyarı)")
+        }
+        : new[]
+        {
+            new ThresholdOption(0, "Default (Global)"),
+            new ThresholdOption(10, "10% (Mouse / Low Power)"),
+            new ThresholdOption(15, "15%"),
+            new ThresholdOption(20, "20% (Standard)"),
+            new ThresholdOption(25, "25%"),
+            new ThresholdOption(30, "30%"),
+            new ThresholdOption(40, "40% (Early Warning)")
+        };
 
-    public static IReadOnlyList<RefreshIntervalOption> AvailableRefreshIntervals { get; } = new[]
-    {
-        new RefreshIntervalOption(30, "30 Saniye"),
-        new RefreshIntervalOption(60, "60 Saniye"),
-        new RefreshIntervalOption(120, "120 Saniye"),
-        new RefreshIntervalOption(300, "300 Saniye")
-    };
+    public static IReadOnlyList<RefreshIntervalOption> AvailableRefreshIntervals => LocalizationService.CurrentLanguage == "tr"
+        ? new[]
+        {
+            new RefreshIntervalOption(30, "30 Saniye"),
+            new RefreshIntervalOption(60, "60 Saniye"),
+            new RefreshIntervalOption(120, "120 Saniye"),
+            new RefreshIntervalOption(300, "300 Saniye")
+        }
+        : new[]
+        {
+            new RefreshIntervalOption(30, "30 Seconds"),
+            new RefreshIntervalOption(60, "60 Seconds"),
+            new RefreshIntervalOption(120, "120 Seconds"),
+            new RefreshIntervalOption(300, "300 Seconds")
+        };
 
     public SettingsViewModel(IEnumerable<BluetoothDeviceModel>? knownDevices = null)
     {
@@ -49,6 +69,7 @@ public partial class SettingsViewModel : ObservableObject
         _criticalBatteryThreshold = _settings.CriticalBatteryThreshold;
         _refreshIntervalSeconds = _settings.RefreshIntervalSeconds;
         _selectedTheme = _settings.Theme;
+        _selectedLanguage = _settings.Language;
         _autoSwitchAudioEndpoint = _settings.AutoSwitchAudioEndpoint;
         _enableRestApi = _settings.EnableRestApi;
         _restApiPort = _settings.RestApiPort;
@@ -204,10 +225,16 @@ public partial class SettingsViewModel : ObservableObject
     public string RestApiUrlPreview => $"http://127.0.0.1:{(RestApiPort >= 1024 && RestApiPort <= 65535 ? RestApiPort : 23253)}/devices";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LowBatteryThresholdText))]
     private int _lowBatteryThreshold;
 
+    public string LowBatteryThresholdText => LocalizationService.FormatPercent(LowBatteryThreshold);
+
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CriticalBatteryThresholdText))]
     private int _criticalBatteryThreshold;
+
+    public string CriticalBatteryThresholdText => LocalizationService.FormatPercent(CriticalBatteryThreshold);
 
     [ObservableProperty]
     private int _refreshIntervalSeconds;
@@ -216,6 +243,11 @@ public partial class SettingsViewModel : ObservableObject
     private string _selectedTheme;
 
     public IReadOnlyList<string> AvailableThemes { get; } = new[] { "System", "Dark", "Light" };
+
+    [ObservableProperty]
+    private string _selectedLanguage;
+
+    public IReadOnlyList<LanguageOption> AvailableLanguages => LocalizationService.SupportedLanguages;
 
     [RelayCommand]
     private void Save()
@@ -289,6 +321,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.CriticalBatteryThreshold = CriticalBatteryThreshold;
         _settings.RefreshIntervalSeconds = RefreshIntervalSeconds;
         _settings.Theme = SelectedTheme;
+        _settings.Language = SelectedLanguage;
         _settings.LaunchAtStartup = LaunchAtStartup;
 
         _settings.Save();
@@ -298,6 +331,9 @@ public partial class SettingsViewModel : ObservableObject
 
         // Temayı uygula
         ThemeManager.ApplyTheme(SelectedTheme);
+
+        // Dili uygula
+        LocalizationService.ApplyLanguage(SelectedLanguage);
     }
 }
 

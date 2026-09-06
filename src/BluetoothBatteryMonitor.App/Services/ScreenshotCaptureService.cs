@@ -31,6 +31,7 @@ public static class ScreenshotCaptureService
                 Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             }
             System.ThemeManager.Initialize();
+            BluetoothBatteryMonitor.App.Services.Localization.LocalizationService.ApplyLanguage("en");
 
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string? projectRoot = FindProjectRoot(baseDir);
@@ -82,7 +83,7 @@ public static class ScreenshotCaptureService
             new BluetoothDeviceModel
             {
                 Id = "BTHENUM\\Dev_4C79BAE12004",
-                Name = "AirPods Pro (2. Nesil)",
+                Name = "AirPods Pro (2nd Gen)",
                 DeviceType = DeviceType.Earbuds,
                 IsTws = true,
                 LeftBatteryLevel = 90,
@@ -108,7 +109,7 @@ public static class ScreenshotCaptureService
             new BluetoothDeviceModel
             {
                 Id = "BTHENUM\\Dev_0017FA92C3D1",
-                Name = "Xbox Kablosuz Oyun Kolu",
+                Name = "Xbox Wireless Controller",
                 DeviceType = DeviceType.Gamepad,
                 BatteryLevel = 20,
                 IsCharging = false,
@@ -156,7 +157,7 @@ public static class ScreenshotCaptureService
         mainVm.LowestBatteryLevel = 20;
         mainVm.IsLowestCharging = false;
         mainVm.HasDevices = true;
-        mainVm.StatusText = "4 Cihaz Bağlı • Eşitlendi";
+        mainVm.StatusText = "4 devices connected • Synced";
 
         var flyout = new FlyoutWindow(mainVm)
         {
@@ -174,7 +175,7 @@ public static class ScreenshotCaptureService
         string pngPath = Path.Combine(outputDir, "flyout_preview.png");
         string jpgPath = Path.Combine(outputDir, "flyout_preview.jpg");
 
-        SaveVisualToPng(flyout, pngPath);
+        SaveVisualToPng(flyout, pngPath, fillDarkBackground: true);
         SaveBitmapAsJpeg(pngPath, jpgPath);
 
         flyout.Close();
@@ -187,12 +188,15 @@ public static class ScreenshotCaptureService
 
         var settingsWindow = new SettingsWindow(sampleDevices)
         {
-            WindowStartupLocation = WindowStartupLocation.CenterScreen
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            Height = 720
         };
         settingsWindow.Background = (global::System.Windows.Media.Brush)settingsWindow.FindResource("ApplicationBackgroundBrush");
 
         if (settingsWindow.DataContext is SettingsViewModel vm)
         {
+            vm.SelectedLanguage = "en";
+            vm.SelectedTheme = "Dark";
             vm.LaunchAtStartup = true;
             foreach (var dt in vm.DeviceThresholds)
             {

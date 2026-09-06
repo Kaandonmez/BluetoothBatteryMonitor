@@ -17,6 +17,7 @@ public class AppSettings
     public bool EnableRestApi { get; set; } = true;
     public int RestApiPort { get; set; } = 23253;
     public string Theme { get; set; } = "System"; // "System", "Dark", "Light"
+    public string Language { get; set; } = "en"; // "en", "tr"
 
     public Dictionary<string, int> DeviceSpecificThresholds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> DeviceNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);

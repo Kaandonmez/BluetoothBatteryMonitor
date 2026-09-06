@@ -100,12 +100,12 @@ public class TrayMenuAndFlyoutLifecycleTests
                 Assert.NotNull(menu);
 
                 var headers = menu.Items.OfType<MenuItem>().Select(m => m.Header?.ToString()).ToList();
-                Assert.Contains("Aç / Gizle", headers);
-                Assert.Contains("Aygıtları Yenile", headers);
-                Assert.Contains("Windows ile Başlat", headers);
-                Assert.Contains("Ayarlar...", headers);
-                Assert.Contains("Hakkında", headers);
-                Assert.Contains("Çıkış", headers);
+                Assert.True(headers.Any(h => h == "Open / Hide" || h == "Aç / Gizle"), "Expected Open/Hide menu item");
+                Assert.True(headers.Any(h => h == "Refresh Devices" || h == "Aygıtları Yenile" || h == "Cihazları Yenile"), "Expected Refresh Devices menu item");
+                Assert.True(headers.Any(h => h == "Launch with Windows" || h == "Windows ile Başlat"), "Expected Launch with Windows menu item");
+                Assert.True(headers.Any(h => h == "Settings..." || h == "Ayarlar..."), "Expected Settings menu item");
+                Assert.True(headers.Any(h => h == "About" || h == "Hakkında"), "Expected About menu item");
+                Assert.True(headers.Any(h => h == "Exit" || h == "Çıkış"), "Expected Exit menu item");
             }
             finally
             {
@@ -342,7 +342,7 @@ public class TrayMenuAndFlyoutLifecycleTests
                 var menu = createMenuMethod.Invoke(trayManager, null) as ContextMenu;
                 Assert.NotNull(menu);
 
-                var startupItem = menu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Header?.ToString() == "Windows ile Başlat");
+                var startupItem = menu.Items.OfType<MenuItem>().FirstOrDefault(m => m.Header?.ToString() == "Launch with Windows" || m.Header?.ToString() == "Windows ile Başlat");
                 Assert.NotNull(startupItem);
                 Assert.True(startupItem.IsCheckable);
 

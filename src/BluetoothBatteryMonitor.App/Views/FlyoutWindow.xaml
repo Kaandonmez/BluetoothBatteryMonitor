@@ -6,7 +6,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:vm="clr-namespace:BluetoothBatteryMonitor.App.ViewModels"
         mc:Ignorable="d"
-        Title="Bluetooth Pil Monitörü"
+        Title="{DynamicResource App_Title}"
         Width="416"
         MaxHeight="660"
         SizeToContent="Height"
@@ -65,7 +65,7 @@
                                            FontSize="20"
                                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                            Margin="0,0,8,0" />
-                            <TextBlock Text="Bluetooth Cihazları"
+                            <TextBlock Text="{DynamicResource Flyout_Header}"
                                        FontSize="16"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
@@ -81,7 +81,7 @@
                     <ui:Button Grid.Column="1"
                                Appearance="Secondary"
                                Icon="{ui:SymbolIcon ArrowClockwise24}"
-                               ToolTip="Cihazları Yenile"
+                               ToolTip="{DynamicResource Flyout_RefreshTooltip}"
                                Command="{Binding RefreshDevicesAsyncCommand}"
                                VerticalAlignment="Center"
                                Padding="8,6" />
@@ -119,40 +119,40 @@
                                 </Border.Style>
                                 <Border.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="Özel Pil Eşiği Belirle" IsEnabled="False" FontWeight="Bold" />
+                                        <MenuItem Header="{DynamicResource Menu_CustomThresholdHeader}" IsEnabled="False" FontWeight="Bold" />
                                         <Separator />
-                                        <MenuItem Header="Varsayılan Eşik (Global)"
+                                        <MenuItem Header="{DynamicResource Menu_DefaultThreshold}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThresholdDefault, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="0" />
                                         <Separator />
-                                        <MenuItem Header="%10 (Fare / Düşük Tüketim)"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold10}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold10, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="10" />
-                                        <MenuItem Header="%15"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold15}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold15, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="15" />
-                                        <MenuItem Header="%20 (Standart Kulaklık)"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold20}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold20, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="20" />
-                                        <MenuItem Header="%25"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold25}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold25, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="25" />
-                                        <MenuItem Header="%30"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold30}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold30, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
                                                   CommandParameter="30" />
-                                        <MenuItem Header="%40 (Erken Uyarı)"
+                                        <MenuItem Header="{DynamicResource Menu_Threshold40}"
                                                   IsCheckable="True"
                                                   IsChecked="{Binding IsThreshold40, Mode=OneWay}"
                                                   Command="{Binding SetThresholdCommand}"
@@ -369,7 +369,7 @@
                                             <!-- Kutu (Case) -->
                                             <StackPanel Grid.Column="1" Margin="4,0" HorizontalAlignment="Stretch">
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock Text="Kutu: " FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{DynamicResource Device_Case}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                     <TextBlock Text="{Binding CaseBatteryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                                     <ui:SymbolIcon Symbol="Flash16" FontSize="11" Foreground="#00A4EF" Margin="3,0,0,0"
                                                                    VerticalAlignment="Center"
@@ -415,7 +415,7 @@
                                                        Appearance="Transparent"
                                                        Padding="4,2"
                                                        Command="{Binding ToggleMuteCommand}"
-                                                       ToolTip="Sesi Aç / Kapat"
+                                                       ToolTip="{DynamicResource Device_MuteTooltip}"
                                                        VerticalAlignment="Center">
                                                 <ui:SymbolIcon FontSize="15" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                                                     <ui:SymbolIcon.Style>
@@ -479,12 +479,12 @@
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,10" />
-                    <TextBlock Text="Bağlı Bluetooth Cihazı Yok"
+                    <TextBlock Text="{DynamicResource Flyout_NoDevicesTitle}"
                                FontSize="14"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="Bluetooth cihazınızı açın ve bilgisayarınıza bağlayın."
+                    <TextBlock Text="{DynamicResource Flyout_NoDevicesDesc}"
                                FontSize="12"
                                TextWrapping="Wrap"
                                TextAlignment="Center"
@@ -513,7 +513,7 @@
                     <ui:Button Grid.Column="0"
                                Appearance="Transparent"
                                Icon="{ui:SymbolIcon Settings24}"
-                               Content="Bluetooth Ayarları"
+                               Content="{DynamicResource Flyout_BluetoothSettings}"
                                FontSize="12"
                                Command="{Binding OpenBluetoothSettingsCommand}"
                                HorizontalAlignment="Left"
@@ -523,7 +523,7 @@
                     <ui:Button Grid.Column="1"
                                Appearance="Transparent"
                                Icon="{ui:SymbolIcon Options24}"
-                               ToolTip="Uygulama Ayarları"
+                               ToolTip="{DynamicResource Flyout_AppSettingsTooltip}"
                                Command="{Binding OpenAppSettingsCommand}"
                                Margin="4,0"
                                Padding="6,4" />
@@ -532,7 +532,7 @@
                     <ui:Button Grid.Column="2"
                                Appearance="Transparent"
                                Icon="{ui:SymbolIcon Dismiss24}"
-                               ToolTip="Gizle"
+                               ToolTip="{DynamicResource Flyout_HideTooltip}"
                                Click="OnCloseClick"
                                Padding="6,4" />
                 </Grid>

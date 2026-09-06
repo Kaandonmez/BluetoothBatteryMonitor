@@ -7,6 +7,7 @@ using BluetoothBatteryMonitor.App.Services.Audio;
 using BluetoothBatteryMonitor.App.Services.Bluetooth;
 using BluetoothBatteryMonitor.App.Services.Notification;
 using BluetoothBatteryMonitor.App.Services.System;
+using BluetoothBatteryMonitor.App.Services.Localization;
 using BluetoothBatteryMonitor.App.Services.Tray;
 using BluetoothBatteryMonitor.App.ViewModels;
 using BluetoothBatteryMonitor.App.Views;
@@ -117,8 +118,10 @@ public partial class App : System.Windows.Application
                 MessageBoxImage.Error);
         };
 
-        // 2. Sistem Servisleri ve Tema Başlatma
+        // 2. Sistem Servisleri, Tema ve Dil Başlatma
+        var initialSettings = AppSettings.Load();
         ThemeManager.Initialize();
+        LocalizationService.Initialize(initialSettings.Language);
 
         // 3. Ses Yöneticisi ve Akıllı Yönlendirici (Smart Audio Router)
         _audioEndpointManager = new AudioEndpointManager();
@@ -128,7 +131,6 @@ public partial class App : System.Windows.Application
         _notificationService = new ToastNotificationService();
         _engine = new BluetoothBatteryEngine(_notificationService, null, _audioEndpointManager);
         _engine.DevicesUpdated += (s, devices) =>
-
         {
             _smartAudioRouter?.OnDevicesUpdated(devices, AppSettings.Load());
         };
@@ -142,7 +144,7 @@ public partial class App : System.Windows.Application
         _trayIconManager.Initialize();
 
         // 7. Yerel REST / JSON API Sunucusu (Varsayılan: http://127.0.0.1:23253/devices)
-        var appSettings = AppSettings.Load();
+        var appSettings = initialSettings;
         _apiServer = new LocalRestApiServer(() => _engine.CurrentDevices, _audioEndpointManager, appSettings.RestApiPort);
         if (appSettings.EnableRestApi)
         {
@@ -151,6 +153,7 @@ public partial class App : System.Windows.Application
 
         AppSettings.SettingsChanged += (s, settings) =>
         {
+            LocalizationService.ApplyLanguage(settings.Language);
             _smartAudioRouter?.OnDevicesUpdated(_engine?.CurrentDevices ?? Array.Empty<BluetoothDeviceModel>(), settings);
 
             if (_apiServer != null)

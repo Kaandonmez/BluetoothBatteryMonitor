@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
-        Title="Hakkında - Bluetooth Pil Monitörü"
+        Title="{DynamicResource About_Title}"
         Width="460"
-        Height="600"
+        Height="540"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowBackdropType="Mica"
@@ -34,7 +34,7 @@
                                VerticalAlignment="Center" />
             </Border>
 
-            <TextBlock Text="Bluetooth Pil Monitörü"
+            <TextBlock Text="{DynamicResource About_AppName}"
                        FontSize="20"
                        FontWeight="Bold"
                        HorizontalAlignment="Center"
@@ -44,7 +44,7 @@
                 <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}"
                         Padding="8,2"
                         CornerRadius="4">
-                    <TextBlock Text="Sürüm 1.0.0 (x64)"
+                    <TextBlock Text="{DynamicResource About_Version}"
                                FontSize="12"
                                FontWeight="Medium"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -62,12 +62,12 @@
                         BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                     <StackPanel>
-                        <TextBlock Text="Genel Bakış"
+                        <TextBlock Text="{DynamicResource About_Overview}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,6" />
-                        <TextBlock Text="Windows 10 ve Windows 11 için modern Fluent Design arayüzüne sahip, bağlı Bluetooth cihazlarınızın (kulaklık, fare, klavye, oyun kolları) pil seviyelerini ve ses durumlarını gerçek zamanlı gösteren masaüstü aracı."
+                        <TextBlock Text="{DynamicResource About_OverviewText}"
                                    FontSize="12.5"
                                    LineHeight="18"
                                    TextWrapping="Wrap"
@@ -82,35 +82,30 @@
                         BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                     <StackPanel>
-                        <TextBlock Text="Öne Çıkan Özellikler"
+                        <TextBlock Text="{DynamicResource About_Features}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    Margin="0,0,0,8" />
 
-                        <TextBlock Text="• 36 Donanım Protokolü: AirPods, Galaxy Buds, Sony MDR, Logitech HID++/LIGHTSPEED, DualSense, Joy-Con vb."
+                        <TextBlock Text="{DynamicResource About_Feature1}"
                                    FontSize="12"
-                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="• Dinamik Sistem Tepsisi Simgesi (GDI+ pil seviyesi çizimi)"
+                        <TextBlock Text="{DynamicResource About_Feature2}"
                                    FontSize="12"
-                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="• Windows Toast Bildirimleri (Kritik ve Düşük pil alarmları)"
+                        <TextBlock Text="{DynamicResource About_Feature3}"
                                    FontSize="12"
-                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="• Akıllı Ses Yönlendirici &amp; Kodek Tespiti (LDAC, aptX HD, AAC, SBC)"
+                        <TextBlock Text="{DynamicResource About_Feature4}"
                                    FontSize="12"
-                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="• Yerel REST / JSON API (Üçüncü parti entegrasyonlar)"
+                        <TextBlock Text="{DynamicResource About_Feature5}"
                                    FontSize="12"
-                                   TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </Border>
@@ -124,7 +119,7 @@
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
 
-            <Button Content="Tamam"
+            <Button Content="{DynamicResource About_Close}"
                     HorizontalAlignment="Right"
                     Click="OnCloseClick"
                     Padding="24,6" />

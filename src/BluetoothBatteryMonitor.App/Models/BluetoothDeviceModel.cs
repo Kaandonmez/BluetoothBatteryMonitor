@@ -17,9 +17,10 @@ public class BluetoothDeviceModel
     {
         get
         {
-            if (IsConnected) return "Bağlı";
-            if (IsTws && (IsLeftCharging || IsRightCharging || IsCaseCharging)) return "Kutuda / Şarj Oluyor";
-            return "Bağlı Değil";
+            if (IsConnected) return Services.Localization.LocalizationService.GetString("Device_Connected");
+            if (IsTws && (IsLeftCharging || IsRightCharging || IsCaseCharging))
+                return Services.Localization.LocalizationService.GetString("Device_ChargingInCase");
+            return Services.Localization.LocalizationService.GetString("Device_Disconnected");
         }
     }
     public string? AudioCodec { get; set; }

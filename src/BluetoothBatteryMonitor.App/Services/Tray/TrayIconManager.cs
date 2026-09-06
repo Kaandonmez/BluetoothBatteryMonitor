@@ -9,6 +9,7 @@ using H.NotifyIcon.Core;
 using BluetoothBatteryMonitor.App.Helpers;
 using BluetoothBatteryMonitor.App.Models;
 using BluetoothBatteryMonitor.App.Services.System;
+using BluetoothBatteryMonitor.App.Services.Localization;
 using BluetoothBatteryMonitor.App.ViewModels;
 using BluetoothBatteryMonitor.App.Views;
 
@@ -32,6 +33,20 @@ public class TrayIconManager : IDisposable
 
         _mainViewModel.BatteryStateChanged += OnBatteryStateChanged;
         ThemeManager.ThemeChanged += OnThemeChanged;
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, string lang)
+    {
+        Application.Current?.Dispatcher?.Invoke(() =>
+        {
+            _contextMenu = CreateContextMenu();
+            if (_taskbarIcon != null)
+            {
+                _taskbarIcon.ContextMenu = _contextMenu;
+            }
+            UpdateTrayIcon();
+        });
     }
 
     public void Initialize()
@@ -135,11 +150,11 @@ public class TrayIconManager : IDisposable
             }
         };
 
-        var openItem = new MenuItem { Header = "Aç / Gizle" };
+        var openItem = new MenuItem { Header = LocalizationService.GetString("Tray_OpenHide") };
         openItem.Click += (s, e) => _flyoutWindow.ToggleFlyout();
         menu.Items.Add(openItem);
 
-        var refreshItem = new MenuItem { Header = "Aygıtları Yenile" };
+        var refreshItem = new MenuItem { Header = LocalizationService.GetString("Tray_Refresh") };
         refreshItem.Click += async (s, e) => await _mainViewModel.RefreshDevicesAsync();
         menu.Items.Add(refreshItem);
 
@@ -147,7 +162,7 @@ public class TrayIconManager : IDisposable
 
         var startupItem = new MenuItem
         {
-            Header = "Windows ile Başlat",
+            Header = LocalizationService.GetString("Tray_LaunchAtStartup"),
             IsCheckable = true,
             IsChecked = StartupManager.IsStartupEnabled()
         };
@@ -167,17 +182,17 @@ public class TrayIconManager : IDisposable
         };
         menu.Items.Add(startupItem);
 
-        var settingsItem = new MenuItem { Header = "Ayarlar..." };
+        var settingsItem = new MenuItem { Header = LocalizationService.GetString("Tray_Settings") };
         settingsItem.Click += (s, e) => MainViewModel.OpenSettingsWindow();
         menu.Items.Add(settingsItem);
 
-        var aboutItem = new MenuItem { Header = "Hakkında" };
+        var aboutItem = new MenuItem { Header = LocalizationService.GetString("Tray_About") };
         aboutItem.Click += (s, e) => MainViewModel.OpenAboutWindow();
         menu.Items.Add(aboutItem);
 
         menu.Items.Add(new Separator());
 
-        var exitItem = new MenuItem { Header = "Çıkış" };
+        var exitItem = new MenuItem { Header = LocalizationService.GetString("Tray_Exit") };
         exitItem.Click += (s, e) => MainViewModel.ExitApp();
         menu.Items.Add(exitItem);
 
@@ -222,11 +237,11 @@ public class TrayIconManager : IDisposable
         if (_mainViewModel.Devices.Count > 0)
         {
             var summary = string.Join("\n", _mainViewModel.Devices.Take(4).Select(d => $"{d.Name}: {d.BatteryText}"));
-            _taskbarIcon.ToolTipText = $"Bluetooth Pil Monitörü\n{summary}";
+            _taskbarIcon.ToolTipText = $"{LocalizationService.GetString("App_Title")}\n{summary}";
         }
         else
         {
-            _taskbarIcon.ToolTipText = "Bluetooth Pil Monitörü (Bağlı cihaz yok)";
+            _taskbarIcon.ToolTipText = LocalizationService.GetString("Tray_TooltipNoDevices");
         }
     }
 

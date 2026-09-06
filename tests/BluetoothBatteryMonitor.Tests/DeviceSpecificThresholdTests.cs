@@ -197,8 +197,8 @@ public class DeviceSpecificThresholdTests
         Assert.True(vm.HasCustomThreshold);
         Assert.Equal(15, vm.CustomThreshold);
         Assert.Equal(15, vm.EffectiveThreshold);
-        Assert.Contains("%15", vm.ThresholdDisplayText);
-        Assert.Contains("%15", vm.CustomThresholdBadgeText);
+        Assert.Contains("15%", vm.ThresholdDisplayText);
+        Assert.Contains("15%", vm.CustomThresholdBadgeText);
 
         // Varsayılana geri al (0 veya null)
         vm.SetThresholdCommand.Execute(0);

@@ -3,10 +3,13 @@
 <div align="center">
 
 [![Build & Test](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
+[![Latest Release](https://img.shields.io/github/v/release/Kaandonmez/BluetoothBatteryMonitor?style=for-the-badge&logo=github&color=blue)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest)
+[![Download Exe](https://img.shields.io/badge/Download-Windows%20x64%20(.exe)-blueviolet?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest)
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![UI Framework](https://img.shields.io/badge/UI-Fluent%20Design%20%2F%20Mica-005FB8?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/lepoco/wpfui)
 [![Tests](https://img.shields.io/badge/Tests-253%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
+[![Languages](https://img.shields.io/badge/Languages-English%20%7C%20Türkçe-orange?style=for-the-badge&logo=translate&logoColor=white)]()
 [![Hardware Protocols](https://img.shields.io/badge/Hardware%20Protocols-36%20Supported-success?style=for-the-badge)]()
 [![GitHub Stars](https://img.shields.io/github/stars/Kaandonmez/BluetoothBatteryMonitor?style=for-the-badge&logo=github&color=gold)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/stargazers)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
@@ -15,16 +18,29 @@
 
 **A modern, native Fluent Design desktop application for Windows 10 and Windows 11 that lives in your system tray and provides real-time battery telemetry, audio codec detection, smart routing, and low-power notifications for all your connected Bluetooth and wireless devices.**
 
+[⬇️ Download](#-download--quick-start) •
 [Key Features](#-key-features) •
 [Screenshots](#-screenshots) •
 [Supported Protocols (36 Families)](#-supported-hardware-protocols--device-catalog) •
 [Architecture](#-project-architecture) •
 [Local REST API](#-local-rest-api) •
-[Installation & Building](#-getting-started--building) •
 [Roadmap](#-roadmap) •
 [How to Contribute](#-how-to-contribute)
 
 </div>
+
+---
+
+## ⬇️ Download & Quick Start
+
+Get the latest official release for Windows 10 & 11 (64-bit):
+
+| Package | Description | Download Link |
+|:---|:---|:---|
+| 🚀 **Standalone Executable** | Single `.exe` ready to run without installation | [**Download BluetoothBatteryMonitor.App.exe**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
+| 📦 **Portable Zip Package** | Full portable distribution archive | [**Download BluetoothBatteryMonitor-win-x64.zip**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
+
+> **Requirements:** Windows 10 (Version 2004+) or Windows 11, with [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ---
 
@@ -104,6 +120,10 @@
 
 - 🌐 **Built-in Local REST API Server:**
   - Embedded zero-dependency HTTP server (`http://127.0.0.1:23253/devices`) with full CORS support for Rainmeter skins, Stream Deck plugins, Home Assistant, or web dashboards.
+
+- 🌍 **Full Multi-Language Support (English & Turkish):**
+  - Complete internationalization (i18n) across all flyout cards, settings, context menus, tooltips, dialogs, and native Windows Toast notifications.
+  - Seamless on-the-fly language switching directly from the Settings window without restarting the application.
 
 - ⚡ **Single Instance Architecture:**
   - Enforces a single running instance via system-wide `Mutex`. Launching a second instance signals `EventWaitHandle` to immediately bring the existing flyout window to the foreground.

@@ -5,6 +5,8 @@
 [Ll]ogs/
 [Tt]emp/
 [Tt]est[Rr]esults/
+publish/
+*.zip
 
 ## Visual Studio & Rider
 .vs/

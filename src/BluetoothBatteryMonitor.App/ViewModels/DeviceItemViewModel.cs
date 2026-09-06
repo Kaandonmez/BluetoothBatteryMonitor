@@ -5,6 +5,7 @@ using BluetoothBatteryMonitor.App.Models;
 using Wpf.Ui.Controls;
 
 using BluetoothBatteryMonitor.App.Services.Audio;
+using BluetoothBatteryMonitor.App.Services.Localization;
 using CommunityToolkit.Mvvm.Input;
 
 namespace BluetoothBatteryMonitor.App.ViewModels;
@@ -118,12 +119,12 @@ public partial class DeviceItemViewModel : ObservableObject
 
     public string AudioCodecToolTip => AudioCodec switch
     {
-        "LDAC" => "Sony LDAC (Yüksek Çözünürlüklü Ses • 990 kbps / 96 kHz)",
-        "aptX HD" => "Qualcomm aptX HD (Yüksek Çözünürlüklü Ses • 576 kbps / 48 kHz)",
-        "aptX" => "Qualcomm aptX (Düşük Gecikmeli Yüksek Kalite • 352 kbps)",
-        "AAC" => "Advanced Audio Coding (Windows 11 / AAC HD Ses • 256 kbps)",
-        "SBC" => "Subband Codec (Standart Bluetooth Ses)",
-        _ => $"Aktif Ses Kodeki: {AudioCodec}"
+        "LDAC" => LocalizationService.GetString("Codec_LDAC"),
+        "aptX HD" => LocalizationService.GetString("Codec_AptXHD"),
+        "aptX" => LocalizationService.GetString("Codec_AptX"),
+        "AAC" => LocalizationService.GetString("Codec_AAC"),
+        "SBC" => LocalizationService.GetString("Codec_SBC"),
+        _ => LocalizationService.GetString("Codec_Active", AudioCodec ?? string.Empty)
     };
 
     // Cihaza Özel Pil Bildirim Eşiği
@@ -159,12 +160,12 @@ public partial class DeviceItemViewModel : ObservableObject
     public bool IsThreshold40 => CustomThreshold == 40;
 
     public string CustomThresholdBadgeText => HasCustomThreshold
-        ? $" • Eşik: %{CustomThreshold}"
+        ? LocalizationService.GetString("Device_CustomThresholdBadge", CustomThreshold!)
         : string.Empty;
 
     public string ThresholdDisplayText => HasCustomThreshold
-        ? $"Özel Eşik: %{CustomThreshold}"
-        : $"Varsayılan (%{GlobalThreshold})";
+        ? LocalizationService.GetString("Device_ThresholdCustom", CustomThreshold!)
+        : LocalizationService.GetString("Device_ThresholdDefault", GlobalThreshold);
 
     [RelayCommand]
     public void SetThreshold(object? parameter)
@@ -323,17 +324,17 @@ public partial class DeviceItemViewModel : ObservableObject
         {
             HasLeftBattery = model.LeftBatteryLevel.HasValue;
             LeftBatteryProgress = model.LeftBatteryLevel ?? 0;
-            LeftBatteryText = model.LeftBatteryLevel.HasValue ? $"%{model.LeftBatteryLevel}" : "--";
+            LeftBatteryText = model.LeftBatteryLevel.HasValue ? LocalizationService.FormatPercent(model.LeftBatteryLevel.Value) : "--";
             IsLeftCharging = model.IsLeftCharging;
 
             HasRightBattery = model.RightBatteryLevel.HasValue;
             RightBatteryProgress = model.RightBatteryLevel ?? 0;
-            RightBatteryText = model.RightBatteryLevel.HasValue ? $"%{model.RightBatteryLevel}" : "--";
+            RightBatteryText = model.RightBatteryLevel.HasValue ? LocalizationService.FormatPercent(model.RightBatteryLevel.Value) : "--";
             IsRightCharging = model.IsRightCharging;
 
             HasCaseBattery = model.CaseBatteryLevel.HasValue;
             CaseBatteryProgress = model.CaseBatteryLevel ?? 0;
-            CaseBatteryText = model.CaseBatteryLevel.HasValue ? $"%{model.CaseBatteryLevel}" : "--";
+            CaseBatteryText = model.CaseBatteryLevel.HasValue ? LocalizationService.FormatPercent(model.CaseBatteryLevel.Value) : "--";
             IsCaseCharging = model.IsCaseCharging;
         }
         else
@@ -348,13 +349,13 @@ public partial class DeviceItemViewModel : ObservableObject
         if (effectiveBattery.HasValue)
         {
             BatteryProgress = Math.Clamp(effectiveBattery.Value, 0, 100);
-            BatteryText = $"%{BatteryProgress}";
+            BatteryText = LocalizationService.FormatPercent(BatteryProgress);
             BatteryBrush = GetBrushForLevel(BatteryProgress, model.IsCharging);
         }
         else
         {
             BatteryProgress = 0;
-            BatteryText = "Bilinmiyor";
+            BatteryText = LocalizationService.GetString("Device_UnknownBattery");
             BatteryBrush = new SolidColorBrush(Color.FromRgb(150, 150, 150));
         }
     }

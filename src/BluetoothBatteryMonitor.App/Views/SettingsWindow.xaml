@@ -6,13 +6,11 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:vm="clr-namespace:BluetoothBatteryMonitor.App.ViewModels"
         mc:Ignorable="d"
-        Title="Ayarlar - Bluetooth Pil Monitörü"
+        Title="{DynamicResource Settings_Title}"
         Width="500"
-        Height="820"
-        MinWidth="500"
-        MinHeight="600"
+        Height="650"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResizeWithGrip"
+        ResizeMode="NoResize"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True">
 
@@ -29,11 +27,11 @@
 
         <!-- Başlık -->
         <StackPanel Grid.Row="0" Margin="0,10,0,20">
-            <TextBlock Text="Uygulama Ayarları"
+            <TextBlock Text="{DynamicResource Settings_Header}"
                        FontSize="20"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="Pil takibi ve bildirim tercihlerinizi özelleştirin."
+            <TextBlock Text="{DynamicResource Settings_SubHeader}"
                        FontSize="13"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -57,11 +55,11 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Windows ile Başlat"
+                            <TextBlock Text="{DynamicResource Settings_LaunchAtStartup}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Bilgisayar açıldığında arka planda başlasın"
+                            <TextBlock Text="{DynamicResource Settings_LaunchAtStartupDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -71,7 +69,7 @@
                     </Grid>
                 </Border>
 
-                <!-- 2. Bildirimleri Etkinleştir -->
+                <!-- 2. Dil Seçimi (Language) -->
                 <Border Margin="0,0,0,12"
                         Padding="14,10"
                         CornerRadius="8"
@@ -84,11 +82,71 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Düşük Pil Bildirimleri"
+                            <TextBlock Text="{DynamicResource Settings_Language}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Pil azaldığında Windows Toast uyarısı gönder"
+                            <TextBlock Text="{DynamicResource Settings_LanguageDesc}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding AvailableLanguages}"
+                                  SelectedValuePath="Code"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
+                                  Width="130"
+                                  VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 3. Arayüz Teması (Theme) -->
+                <Border Margin="0,0,0,12"
+                        Padding="14,10"
+                        CornerRadius="8"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings_Theme}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{DynamicResource Settings_ThemeDesc}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding AvailableThemes}"
+                                  SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                                  Width="130"
+                                  VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- 4. Bildirimleri Etkinleştir -->
+                <Border Margin="0,0,0,12"
+                        Padding="14,10"
+                        CornerRadius="8"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings_Notifications}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{DynamicResource Settings_NotificationsDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -111,11 +169,11 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Akıllı Ses Yönlendirici"
+                            <TextBlock Text="{DynamicResource Settings_AudioRouter}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Kulaklık bağlandığında varsayılan ses çıkışını otomatik değiştir"
+                            <TextBlock Text="{DynamicResource Settings_AudioRouterDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -139,11 +197,11 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Yerel REST API Sunucusu"
+                                <TextBlock Text="{DynamicResource Settings_RestApi}"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <TextBlock Text="Pil verilerini üçüncü parti araçlar için yerel HTTP portundan sun"
+                                <TextBlock Text="{DynamicResource Settings_RestApiDesc}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
@@ -159,7 +217,7 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Dinleme Portu (1024 - 65535)"
+                                <TextBlock Text="{DynamicResource Settings_RestApiPort}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -188,11 +246,11 @@
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                     <StackPanel>
                         <Grid>
-                            <TextBlock Text="Düşük Pil Uyarı Eşiği"
+                            <TextBlock Text="{DynamicResource Settings_LowThreshold}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="{Binding LowBatteryThreshold, StringFormat='%{0}'}"
+                            <TextBlock Text="{Binding LowBatteryThresholdText}"
                                        FontSize="14"
                                        FontWeight="Bold"
                                        HorizontalAlignment="Right"
@@ -215,11 +273,11 @@
                         BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                     <StackPanel>
-                        <TextBlock Text="Cihaz Bazlı Özel Eşikler"
+                        <TextBlock Text="{DynamicResource Settings_DeviceThresholds}"
                                    FontSize="14"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Her cihaz için farklı pil seviyesinde uyarı (Örn: Fare için %10, Kulaklık için %25)"
+                        <TextBlock Text="{DynamicResource Settings_DeviceThresholdsDesc}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -258,7 +316,7 @@
                                 CornerRadius="6"
                                 Background="{DynamicResource SubtleFillColorSecondaryBrush}"
                                 Margin="0,4,0,0">
-                            <TextBlock Text="💡 İpucu: Flyout penceresindeki cihaz kartına sağ tıklayarak da o cihaza özel eşik belirleyebilirsiniz."
+                            <TextBlock Text="{DynamicResource Settings_DeviceThresholdsTip}"
                                        FontSize="11"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
@@ -266,7 +324,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 4. Kritik Pil Eşiği -->
+                <!-- 6. Kritik Pil Eşiği -->
                 <Border Margin="0,0,0,12"
                         Padding="14,10"
                         CornerRadius="8"
@@ -275,11 +333,11 @@
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                     <StackPanel>
                         <Grid>
-                            <TextBlock Text="Kritik Pil Uyarı Eşiği"
+                            <TextBlock Text="{DynamicResource Settings_CriticalThreshold}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="{Binding CriticalBatteryThreshold, StringFormat='%{0}'}"
+                            <TextBlock Text="{Binding CriticalBatteryThresholdText}"
                                        FontSize="14"
                                        FontWeight="Bold"
                                        HorizontalAlignment="Right"
@@ -294,7 +352,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 5. Tarama Sıklığı -->
+                <!-- 7. Tarama Sıklığı -->
                 <Border Margin="0,0,0,12"
                         Padding="14,10"
                         CornerRadius="8"
@@ -307,11 +365,11 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Yoklama Sıklığı"
+                            <TextBlock Text="{DynamicResource Settings_PollingFrequency}"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Pil kontrolleri arasındaki süre"
+                            <TextBlock Text="{DynamicResource Settings_PollingFrequencyDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -325,42 +383,13 @@
                     </Grid>
                 </Border>
 
-                <!-- 6. Arayüz Teması -->
-                <Border Margin="0,0,0,12"
-                        Padding="14,10"
-                        CornerRadius="8"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderThickness="1"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Tema Seçimi"
-                                       FontSize="14"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Arayüz görünümünü belirleyin"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding AvailableThemes}"
-                                  SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
-                                  Width="120"
-                                  VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
             </StackPanel>
         </ScrollViewer>
 
         <!-- Kaydet Butonu -->
         <Border Grid.Row="2"
                 Margin="0,16,0,0">
-            <Button Content="Kaydet ve Kapat"
+            <Button Content="{DynamicResource Settings_SaveAndClose}"
                     HorizontalAlignment="Right"
                     Click="OnSaveAndCloseClick"
                     Padding="20,8" />
