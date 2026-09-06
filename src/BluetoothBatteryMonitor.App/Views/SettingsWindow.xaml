@@ -8,9 +8,11 @@
         mc:Ignorable="d"
         Title="Ayarlar - Bluetooth Pil Monitörü"
         Width="500"
-        Height="620"
+        Height="820"
+        MinWidth="500"
+        MinHeight="600"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
         WindowBackdropType="Mica"
         ExtendsContentIntoTitleBar="True">
 

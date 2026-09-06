@@ -191,6 +191,22 @@ public static class ScreenshotCaptureService
         };
         settingsWindow.Background = (global::System.Windows.Media.Brush)settingsWindow.FindResource("ApplicationBackgroundBrush");
 
+        if (settingsWindow.DataContext is SettingsViewModel vm)
+        {
+            vm.LaunchAtStartup = true;
+            foreach (var dt in vm.DeviceThresholds)
+            {
+                if (dt.Name.Contains("Sony", StringComparison.OrdinalIgnoreCase))
+                    dt.SelectedThreshold = 20;
+                else if (dt.Name.Contains("AirPods", StringComparison.OrdinalIgnoreCase))
+                    dt.SelectedThreshold = 15;
+                else if (dt.Name.Contains("Logitech", StringComparison.OrdinalIgnoreCase) || dt.Name.Contains("Master", StringComparison.OrdinalIgnoreCase))
+                    dt.SelectedThreshold = 10;
+                else if (dt.Name.Contains("Xbox", StringComparison.OrdinalIgnoreCase))
+                    dt.SelectedThreshold = 25;
+            }
+        }
+
         settingsWindow.Show();
         settingsWindow.Activate();
         settingsWindow.Topmost = true;
@@ -200,12 +216,8 @@ public static class ScreenshotCaptureService
         string pngPath = Path.Combine(outputDir, "settings_preview.png");
         string jpgPath = Path.Combine(outputDir, "settings_preview.jpg");
 
-        bool screenCaptured = CaptureWindowFromScreen(settingsWindow, pngPath, jpgPath);
-        if (!screenCaptured || !File.Exists(pngPath))
-        {
-            SaveVisualToPng(settingsWindow, pngPath, fillDarkBackground: true);
-            SaveBitmapAsJpeg(pngPath, jpgPath);
-        }
+        SaveVisualToPng(settingsWindow, pngPath, fillDarkBackground: true);
+        SaveBitmapAsJpeg(pngPath, jpgPath);
 
         settingsWindow.Close();
         PumpWpfEvents(100);
@@ -230,12 +242,8 @@ public static class ScreenshotCaptureService
         string pngPath = Path.Combine(outputDir, "about_preview.png");
         string jpgPath = Path.Combine(outputDir, "about_preview.jpg");
 
-        bool screenCaptured = CaptureWindowFromScreen(aboutWindow, pngPath, jpgPath);
-        if (!screenCaptured || !File.Exists(pngPath))
-        {
-            SaveVisualToPng(aboutWindow, pngPath, fillDarkBackground: true);
-            SaveBitmapAsJpeg(pngPath, jpgPath);
-        }
+        SaveVisualToPng(aboutWindow, pngPath, fillDarkBackground: true);
+        SaveBitmapAsJpeg(pngPath, jpgPath);
 
         aboutWindow.Close();
         PumpWpfEvents(100);
@@ -262,21 +270,37 @@ public static class ScreenshotCaptureService
         element.UpdateLayout();
         int width = (int)Math.Ceiling(element.ActualWidth > 0 ? element.ActualWidth : element.Width);
         int height = (int)Math.Ceiling(element.ActualHeight > 0 ? element.ActualHeight : element.Height);
-        if (width <= 0) width = 420;
-        if (height <= 0) height = 550;
+        if (width <= 0) width = 500;
+        if (height <= 0) height = 650;
+
+        int margin = fillDarkBackground ? 16 : 0;
+        int totalWidth = width + (margin * 2);
+        int totalHeight = height + (margin * 2);
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
             if (fillDarkBackground)
             {
+                // Windows 11 yumuşak pencere gölgesi çizimi (multi-pass shadow)
+                for (int i = 10; i >= 1; i--)
+                {
+                    var shadowRect = new Rect(margin - i, margin - i + 3, width + (i * 2), height + (i * 2));
+                    byte alpha = (byte)(16 - i);
+                    var shadowBrush = new SolidColorBrush(Color.FromArgb(alpha, 0, 0, 0));
+                    dc.DrawRoundedRectangle(shadowBrush, null, shadowRect, 10 + i, 10 + i);
+                }
+
+                // Pencere arka planı ve 1px zarif Fluent kenarlık
                 var darkBrush = new SolidColorBrush(Color.FromRgb(32, 32, 36));
-                dc.DrawRoundedRectangle(darkBrush, null, new Rect(0, 0, width, height), 10, 10);
+                var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)), 1.0);
+                dc.DrawRoundedRectangle(darkBrush, borderPen, new Rect(margin, margin, width, height), 10, 10);
             }
-            dc.DrawRectangle(new VisualBrush(element), null, new Rect(0, 0, width, height));
+
+            dc.DrawRectangle(new VisualBrush(element), null, new Rect(margin, margin, width, height));
         }
 
-        var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        var rtb = new RenderTargetBitmap(totalWidth, totalHeight, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(visual);
 
         var encoder = new PngBitmapEncoder();
@@ -313,44 +337,6 @@ public static class ScreenshotCaptureService
         }
     }
 
-    private static bool CaptureWindowFromScreen(Window window, string pngPath, string? jpgPath = null)
-    {
-        try
-        {
-            var helper = new WindowInteropHelper(window);
-            IntPtr hwnd = helper.Handle;
-            if (hwnd == IntPtr.Zero) return false;
-
-            NativeMethods.RECT rect;
-            int hr = NativeMethods.DwmGetWindowAttribute(hwnd, NativeMethods.DWMWA_EXTENDED_FRAME_BOUNDS, out rect, Marshal.SizeOf<NativeMethods.RECT>());
-            if (hr != 0 || rect.Right <= rect.Left || rect.Bottom <= rect.Top)
-            {
-                NativeMethods.GetWindowRect(hwnd, out rect);
-            }
-
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-            if (width <= 0 || height <= 0) return false;
-
-            using var bmp = new Gdi.Bitmap(width, height, GdiImaging.PixelFormat.Format32bppArgb);
-            using (var g = Gdi.Graphics.FromImage(bmp))
-            {
-                g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Gdi.Size(width, height), Gdi.CopyPixelOperation.SourceCopy);
-            }
-
-            bmp.Save(pngPath, GdiImaging.ImageFormat.Png);
-            if (jpgPath != null)
-            {
-                bmp.Save(jpgPath, GdiImaging.ImageFormat.Jpeg);
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ScreenshotCapture] Screen capture failed: {ex.Message}");
-            return false;
-        }
-    }
 
     private static string? FindProjectRoot(string startDir)
     {

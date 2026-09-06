@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Hakkında - Bluetooth Pil Monitörü"
         Width="460"
-        Height="540"
+        Height="600"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowBackdropType="Mica"
@@ -90,22 +90,27 @@
 
                         <TextBlock Text="• 36 Donanım Protokolü: AirPods, Galaxy Buds, Sony MDR, Logitech HID++/LIGHTSPEED, DualSense, Joy-Con vb."
                                    FontSize="12"
+                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="• Dinamik Sistem Tepsisi Simgesi (GDI+ pil seviyesi çizimi)"
                                    FontSize="12"
+                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="• Windows Toast Bildirimleri (Kritik ve Düşük pil alarmları)"
                                    FontSize="12"
+                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="• Akıllı Ses Yönlendirici &amp; Kodek Tespiti (LDAC, aptX HD, AAC, SBC)"
                                    FontSize="12"
+                                   TextWrapping="Wrap"
                                    Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="• Yerel REST / JSON API (Üçüncü parti entegrasyonlar)"
                                    FontSize="12"
+                                   TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </Border>
