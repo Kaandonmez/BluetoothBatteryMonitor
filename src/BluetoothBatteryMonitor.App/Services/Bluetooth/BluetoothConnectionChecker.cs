@@ -130,17 +130,58 @@ public static class BluetoothConnectionChecker
             if (model.IsTws && (model.ProviderSource.Contains("Apple Beacon", StringComparison.OrdinalIgnoreCase) ||
                                model.ProviderSource.Contains("Fast Pair", StringComparison.OrdinalIgnoreCase)))
             {
-                // Eğer her iki kulaklık da kutuda şarj oluyorsa Windows'a bağlı değildir
+                string cleanName = !string.IsNullOrWhiteSpace(model.Name) ? BluetoothDeviceModel.CleanNameForComparison(model.Name) : string.Empty;
+
+                // 1. Önce aktif Windows CoreAudio kontrolü!
+                bool isAudioActive = ActiveAudioNames.Any(a =>
+                    a.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrEmpty(cleanName) && (a.Contains(cleanName, StringComparison.OrdinalIgnoreCase) || cleanName.Contains(a, StringComparison.OrdinalIgnoreCase))) ||
+                    (!string.IsNullOrEmpty(model.Name) && (a.Contains(model.Name, StringComparison.OrdinalIgnoreCase) || model.Name.Contains(a, StringComparison.OrdinalIgnoreCase))));
+
+                // 2. Win32 / WinRT eşleşmiş cihaz bağlantı kontrolü (MacByName üzerinden)
+                bool isPairedConnected = false;
+                if (!string.IsNullOrEmpty(cleanName) && MacByName.TryGetValue(cleanName, out ulong resolvedMac) && resolvedMac != 0)
+                {
+                    model.SecondaryBluetoothAddress = resolvedMac;
+                    if ((ClassicConnectedByMac.TryGetValue(resolvedMac, out bool cConn) && cConn) ||
+                        (AepConnectedByMac.TryGetValue(resolvedMac, out bool aConn) && aConn))
+                    {
+                        isPairedConnected = true;
+                    }
+                }
+
+                // 3. ConnectedByName kontrolü
+                if (!isPairedConnected)
+                {
+                    foreach (var kvp in ConnectedByName)
+                    {
+                        if (kvp.Key.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrEmpty(cleanName) && (kvp.Key.Contains(cleanName, StringComparison.OrdinalIgnoreCase) || cleanName.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase))))
+                        {
+                            if (kvp.Value)
+                            {
+                                isPairedConnected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (isAudioActive || isPairedConnected)
+                {
+                    // Aktif ses akışı veya Windows Bluetooth bağlantısı varken kulaklıklar kutuda şarj olamaz
+                    if (model.IsLeftCharging && model.IsRightCharging)
+                    {
+                        model.IsLeftCharging = false;
+                        model.IsRightCharging = false;
+                    }
+                    return true;
+                }
+
+                // 4. Eğer aktif ses veya Windows bağlantısı yoksa ve her iki kulaklık da şarj oluyorsa kutudadır
                 if (model.IsLeftCharging && model.IsRightCharging)
                 {
                     return false;
-                }
-
-                // Eğer aktif ses aygıtı olarak sistemde çalışıyorsa kesinlikle bağlıdır
-                if (ActiveAudioNames.Any(a => a.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
-                                              (!string.IsNullOrEmpty(model.Name) && a.Contains(model.Name, StringComparison.OrdinalIgnoreCase))))
-                {
-                    return true;
                 }
 
                 ulong beaconMac = model.BluetoothAddress != 0 ? model.BluetoothAddress : BluetoothDeviceModel.ExtractMacAddress(model.Id);
@@ -224,18 +265,37 @@ public static class BluetoothConnectionChecker
             var endpoints = audioMgr.GetPlaybackEndpoints();
             foreach (var ep in endpoints)
             {
+                if (string.IsNullOrWhiteSpace(ep.Name)) continue;
+
+                // Parantez içi temiz aygıt adını çıkar (örn: "Kulaklıklar (AirPods Pro - Find My)" -> "AirPods Pro - Find My")
+                string inside = ep.Name;
+                int openParen = ep.Name.IndexOf('(');
+                int closeParen = ep.Name.LastIndexOf(')');
+                if (openParen >= 0 && closeParen > openParen)
+                {
+                    inside = ep.Name.Substring(openParen + 1, closeParen - openParen - 1).Trim();
+                }
+
+                string cleanInside = BluetoothDeviceModel.CleanNameForComparison(inside);
+                string cleanFull = BluetoothDeviceModel.CleanNameForComparison(ep.Name);
+
                 bool isBluetooth = (!string.IsNullOrEmpty(ep.DeviceInstanceId) && ep.DeviceInstanceId.Contains("BTH", StringComparison.OrdinalIgnoreCase))
                                    || (!string.IsNullOrEmpty(ep.Id) && ep.Id.Contains("BTH", StringComparison.OrdinalIgnoreCase))
-                                   || (!string.IsNullOrEmpty(ep.Description) && ep.Description.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase));
+                                   || (!string.IsNullOrEmpty(ep.Description) && ep.Description.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
+                                   || snapshot.ConnectedByName.ContainsKey(cleanInside)
+                                   || snapshot.ConnectedByName.ContainsKey(inside)
+                                   || snapshot.MacByName.ContainsKey(cleanInside)
+                                   || snapshot.MacByName.ContainsKey(inside)
+                                   || inside.Contains("AirPods", StringComparison.OrdinalIgnoreCase)
+                                   || cleanInside.Contains("AirPods", StringComparison.OrdinalIgnoreCase)
+                                   || ep.Name.Contains("AirPods", StringComparison.OrdinalIgnoreCase);
 
-                if (isBluetooth && !string.IsNullOrWhiteSpace(ep.Name))
+                if (isBluetooth)
                 {
                     snapshot.ActiveAudioNames.Add(ep.Name);
-                    string clean = BluetoothDeviceModel.CleanNameForComparison(ep.Name);
-                    if (!string.IsNullOrEmpty(clean))
-                    {
-                        snapshot.ActiveAudioNames.Add(clean);
-                    }
+                    if (!string.IsNullOrEmpty(inside)) snapshot.ActiveAudioNames.Add(inside);
+                    if (!string.IsNullOrEmpty(cleanInside)) snapshot.ActiveAudioNames.Add(cleanInside);
+                    if (!string.IsNullOrEmpty(cleanFull)) snapshot.ActiveAudioNames.Add(cleanFull);
                 }
             }
         }
@@ -367,63 +427,14 @@ public static class BluetoothConnectionChecker
 
     /// <summary>
     /// Verilen cihazın canlı bağlantı durumunu teyit eder.
-    /// Önce snapshot'a bakar, yetersizse doğrudan WinRT Bluetooth nesnesini sorgular.
+    /// Tek bir doğru kaynak (Single Source of Truth) olarak BluetoothConnectionSnapshot kullanır.
     /// </summary>
     public static async Task<bool> IsDeviceConnectedAsync(BluetoothDeviceModel model, BluetoothConnectionSnapshot? snapshot = null)
     {
         if (model == null) return false;
 
-        // 1. Snapshot kontrolü
-        if (snapshot != null)
-        {
-            return snapshot.IsConnected(model);
-        }
-
-        // 2. Doğrudan WinRT sorgusu (Birincil MAC)
-        ulong mac = model.BluetoothAddress != 0 ? model.BluetoothAddress : BluetoothDeviceModel.ExtractMacAddress(model.Id);
-        if (mac != 0 && await CheckWinRtAddressConnectedAsync(mac))
-        {
-            return true;
-        }
-
-        // 3. Doğrudan WinRT sorgusu (İkincil Dual-mode MAC)
-        if (model.SecondaryBluetoothAddress != 0 && await CheckWinRtAddressConnectedAsync(model.SecondaryBluetoothAddress))
-        {
-            return true;
-        }
-
-        // 4. Id string'i ile sorgu
-        if (!string.IsNullOrEmpty(model.Id))
-        {
-            if (model.Id.Contains("BTHLE", StringComparison.OrdinalIgnoreCase) || model.Id.Contains("BluetoothLE", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    using var cts = new CancellationTokenSource(600);
-                    var ble = await BluetoothLEDevice.FromIdAsync(model.Id).AsTask(cts.Token);
-                    if (ble != null)
-                    {
-                        return ble.ConnectionStatus == BluetoothConnectionStatus.Connected;
-                    }
-                }
-                catch { }
-            }
-            else if (model.Id.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase) || model.Id.Contains("Bluetooth#", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    using var cts = new CancellationTokenSource(600);
-                    var classic = await BluetoothDevice.FromIdAsync(model.Id).AsTask(cts.Token);
-                    if (classic != null)
-                    {
-                        return classic.ConnectionStatus == BluetoothConnectionStatus.Connected;
-                    }
-                }
-                catch { }
-            }
-        }
-
-        return false;
+        var snap = snapshot ?? await CaptureSnapshotAsync();
+        return snap.IsConnected(model);
     }
 
     private static async Task<bool> CheckWinRtAddressConnectedAsync(ulong mac)
@@ -464,75 +475,7 @@ public static class BluetoothConnectionChecker
 
         foreach (var dev in devices)
         {
-            // Apple AirPods ve Google Fast Pair gibi anlık BLE beacon'ları kendi süreli varlık yönetimini yapar
-            if (dev.IsTws && (dev.ProviderSource.Contains("Apple Beacon", StringComparison.OrdinalIgnoreCase) ||
-                             dev.ProviderSource.Contains("Fast Pair", StringComparison.OrdinalIgnoreCase)))
-            {
-                // Kulaklıklar kutudaysa (her ikisi de şarj oluyorsa), fiziksel olarak kulakta değildir ve ses bağlı olamaz
-                bool allEarbudsCharging = (dev.IsLeftCharging && dev.IsRightCharging) ||
-                                          (dev.LeftBatteryLevel == null && dev.RightBatteryLevel == null && dev.IsCaseCharging);
-
-                if (allEarbudsCharging)
-                {
-                    dev.IsConnected = false;
-                }
-                else
-                {
-                    // Kulaklıklardan en az biri kutuda değil; Windows ses veya radyo bağlantısını kontrol et
-                    string clean = BluetoothDeviceModel.CleanNameForComparison(dev.Name);
-                    bool isAudioActive = snapshot.ActiveAudioNames.Any(a =>
-                        a.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
-                        (!string.IsNullOrEmpty(clean) && a.Contains(clean, StringComparison.OrdinalIgnoreCase)));
-
-                    bool isPairedConnected = false;
-                    foreach (var kvp in snapshot.ConnectedByName)
-                    {
-                        if (kvp.Key.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
-                            (!string.IsNullOrEmpty(clean) && kvp.Key.Contains(clean, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            if (kvp.Value)
-                            {
-                                isPairedConnected = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    dev.IsConnected = isAudioActive || isPairedConnected;
-                }
-                continue;
-            }
-
-            ulong mac = dev.BluetoothAddress != 0 ? dev.BluetoothAddress : BluetoothDeviceModel.ExtractMacAddress(dev.Id);
-            if (mac == 0 && !string.IsNullOrWhiteSpace(dev.Name))
-            {
-                string clean = BluetoothDeviceModel.CleanNameForComparison(dev.Name);
-                if (!BluetoothDeviceModel.IsGenericName(clean) && snapshot.MacByName.TryGetValue(clean, out ulong resolvedMac))
-                {
-                    mac = resolvedMac;
-                    dev.BluetoothAddress = resolvedMac;
-                }
-            }
-
-            var status = snapshot.TryGetStatus(mac, dev.Id, dev.Name, dev.Type);
-            if (status == true)
-            {
-                dev.IsConnected = true;
-                continue;
-            }
-
-            // İkincil MAC kontrolü (Dual-mode)
-            if (dev.SecondaryBluetoothAddress != 0)
-            {
-                var secStatus = snapshot.TryGetStatus(dev.SecondaryBluetoothAddress, null, dev.Name, dev.Type);
-                if (secStatus == true)
-                {
-                    dev.IsConnected = true;
-                    continue;
-                }
-            }
-
-            dev.IsConnected = status ?? false;
+            dev.IsConnected = snapshot.IsConnected(dev);
         }
     }
 }

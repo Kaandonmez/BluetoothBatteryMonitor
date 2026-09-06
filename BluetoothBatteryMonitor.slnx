@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/BluetoothBatteryMonitor/BluetoothBatteryMonitor.csproj" />
-    <Project Path="src/BluetoothBatteryMonitor.App/BluetoothBatteryMonitor.App.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/BluetoothBatteryMonitor.Tests/BluetoothBatteryMonitor.Tests.csproj" />
-  </Folder>
-</Solution>

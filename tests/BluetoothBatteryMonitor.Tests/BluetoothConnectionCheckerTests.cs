@@ -477,5 +477,54 @@ public class BluetoothConnectionCheckerTests
         bool isConnected = snapshot.IsConnected(airPods);
         Assert.False(isConnected);
     }
+
+    [Fact]
+    public void IsConnected_AirPodsBeacon_WhenActiveInAudio_ReturnsTrue_AndClearsChargingFlags()
+    {
+        var snapshot = new AppChecker.BluetoothConnectionSnapshot();
+        snapshot.ActiveAudioNames.Add("Kulaklıklar (AirPods Pro - Find My)");
+        snapshot.ActiveAudioNames.Add("AirPods Pro - Find My");
+        snapshot.ActiveAudioNames.Add("AirPods Pro");
+
+        var airPods = new AppDevice
+        {
+            Id = "AirPods_7E:FA:82:14:61:21",
+            Name = "AirPods Pro (2. Nesil)",
+            IsTws = true,
+            ProviderSource = "Apple Beacon (BLE)",
+            IsLeftCharging = true,
+            IsRightCharging = true,
+            IsConnected = false
+        };
+
+        bool isConnected = snapshot.IsConnected(airPods);
+        Assert.True(isConnected, "Windows'ta aktif ses akışı olan AirPods bağlı olarak işaretlenmelidir.");
+        Assert.False(airPods.IsLeftCharging, "Aktif kullanımda kulaklık şarj bayrağı temizlenmelidir.");
+        Assert.False(airPods.IsRightCharging, "Aktif kullanımda kulaklık şarj bayrağı temizlenmelidir.");
+    }
+
+    [Fact]
+    public void IsConnected_AirPodsBeacon_WhenPairedInWin32_ReturnsTrue()
+    {
+        var snapshot = new AppChecker.BluetoothConnectionSnapshot();
+        ulong classicMac = 0xEC73793D67B2;
+        snapshot.MacByName["AirPods Pro"] = classicMac;
+        snapshot.ClassicConnectedByMac[classicMac] = true;
+
+        var airPods = new AppDevice
+        {
+            Id = "AirPods_7E:FA:82:14:61:21",
+            Name = "AirPods Pro (2. Nesil)",
+            IsTws = true,
+            ProviderSource = "Apple Beacon (BLE)",
+            IsLeftCharging = true,
+            IsRightCharging = true,
+            IsConnected = false
+        };
+
+        bool isConnected = snapshot.IsConnected(airPods);
+        Assert.True(isConnected, "Win32 Classic Bluetooth'ta bağlı olan AirPods bağlı dönmelidir.");
+        Assert.Equal(classicMac, airPods.SecondaryBluetoothAddress);
+    }
 }
 

@@ -318,11 +318,24 @@ public class AudioEndpointManager : IAudioEndpointManager
             if (macMatch != null) return macMatch;
         }
 
-        // 2. Temizlenmiş ad tam eşleşmesi
+        // 2. Temizlenmiş ad tam veya parantez içi eşleşmesi (örn: "Kulaklıklar (AirPods Pro - Find My)" -> "AirPods Pro")
         var exactMatch = endpoints.FirstOrDefault(e =>
         {
             string cleanEp = BluetoothDeviceModel.CleanNameForComparison(e.Name);
-            return string.Equals(cleanEp, cleanDevName, StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(cleanEp, cleanDevName, StringComparison.OrdinalIgnoreCase)) return true;
+
+            int open = e.Name.IndexOf('(');
+            int close = e.Name.LastIndexOf(')');
+            if (open >= 0 && close > open)
+            {
+                string inside = e.Name.Substring(open + 1, close - open - 1).Trim();
+                string cleanInside = BluetoothDeviceModel.CleanNameForComparison(inside);
+                if (string.Equals(cleanInside, cleanDevName, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(inside, cleanDevName, StringComparison.OrdinalIgnoreCase)) return true;
+                if (!string.IsNullOrEmpty(cleanDevName) && cleanInside.Contains(cleanDevName, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            return false;
         });
         if (exactMatch != null) return exactMatch;
 

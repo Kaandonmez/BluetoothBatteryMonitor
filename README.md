@@ -5,7 +5,7 @@
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![UI Framework](https://img.shields.io/badge/UI-Fluent%20Design%20%2F%20Mica-005FB8?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/lepoco/wpfui)
-[![Tests](https://img.shields.io/badge/Tests-250%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)]()
+[![Tests](https://img.shields.io/badge/Tests-253%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
 [![Hardware Protocols](https://img.shields.io/badge/Hardware%20Protocols-36%20Supported-success?style=for-the-badge)]()
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
@@ -234,9 +234,9 @@ git clone https://github.com/Kaandonmez/BluetoothBatteryMonitor.git
 cd BluetoothBatteryMonitor
 ```
 
-### 2. Run Unit & Integration Tests (250 Tests)
+### 2. Run Unit & Integration Tests (253 Tests)
 ```powershell
-dotnet test BluetoothBatteryMonitor.sln
+dotnet test
 ```
 
 ### 3. Run in Development Mode
@@ -307,7 +307,7 @@ BluetoothBatteryMonitor/
 │   │       └── AboutWindow.xaml & .cs                # About dialog and system telemetry diagnostics
 │   └── BluetoothBatteryMonitor/                      # Shared core helper library
 ├── tests/
-│   └── BluetoothBatteryMonitor.Tests/                # 250 xUnit unit and integration tests
+│   └── BluetoothBatteryMonitor.Tests/                # 253 xUnit unit and integration tests
 └── docs/
     └── screenshots/                                  # High-resolution application preview assets
 ```
