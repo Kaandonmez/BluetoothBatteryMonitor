@@ -16,7 +16,9 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <RootNamespace>BluetoothBatteryMonitor</RootNamespace>
     <AssemblyName>BluetoothBatteryMonitor</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
     <Company>Bluetooth Battery Monitor</Company>
     <Product>Bluetooth Battery Monitor</Product>
     <Description>Windows 10/11 Modern Fluent Bluetooth Pil Monitörü</Description>
