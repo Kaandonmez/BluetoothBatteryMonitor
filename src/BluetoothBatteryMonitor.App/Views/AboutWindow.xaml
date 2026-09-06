@@ -114,10 +114,10 @@
 
         <!-- Alt Butonlar -->
         <Grid Grid.Row="2" Margin="0,16,0,0">
-            <TextBlock Text="© 2026 Bluetooth Battery Monitor"
-                       FontSize="11"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Button Content="{DynamicResource Update_CheckNow}"
+                    HorizontalAlignment="Left"
+                    Click="OnCheckUpdatesClick"
+                    Padding="14,6" />
 
             <Button Content="{DynamicResource About_Close}"
                     HorizontalAlignment="Right"

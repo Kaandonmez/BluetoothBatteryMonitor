@@ -383,6 +383,54 @@
                     </Grid>
                 </Border>
 
+                <!-- 8. Yazılım Güncellemeleri (Software Updates) -->
+                <Border Margin="0,0,0,12"
+                        Padding="14,10"
+                        CornerRadius="8"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Update_Title}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="{DynamicResource Update_Desc}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Content="{DynamicResource Update_CheckNow}"
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    IsEnabled="{Binding CanCheckUpdates}"
+                                    Padding="14,6"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+
+                        <!-- Güncelleme Durum Mesajı -->
+                        <TextBlock Text="{Binding UpdateStatusMessage}"
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Foreground="#3B82F6"
+                                   Margin="0,8,0,0"
+                                   TextWrapping="Wrap" />
+
+                        <!-- Yeni Sürüm İndirme Butonu -->
+                        <Button Content="{DynamicResource Update_Download}"
+                                Command="{Binding OpenUpdateDownloadCommand}"
+                                Visibility="{Binding HasUpdateAvailable, Converter={StaticResource BoolToVis}}"
+                                HorizontalAlignment="Left"
+                                Margin="0,8,0,0"
+                                Padding="16,6" />
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
 

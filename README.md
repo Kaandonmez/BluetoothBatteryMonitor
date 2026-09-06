@@ -8,7 +8,7 @@
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![UI Framework](https://img.shields.io/badge/UI-Fluent%20Design%20%2F%20Mica-005FB8?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/lepoco/wpfui)
-[![Tests](https://img.shields.io/badge/Tests-253%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
+[![Tests](https://img.shields.io/badge/Tests-263%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
 [![Languages](https://img.shields.io/badge/Languages-English%20%7C%20Türkçe-orange?style=for-the-badge&logo=translate&logoColor=white)]()
 [![Hardware Protocols](https://img.shields.io/badge/Hardware%20Protocols-36%20Supported-success?style=for-the-badge)]()
 [![GitHub Stars](https://img.shields.io/github/stars/Kaandonmez/BluetoothBatteryMonitor?style=for-the-badge&logo=github&color=gold)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/stargazers)
@@ -37,10 +37,13 @@ Get the latest official release for Windows 10 & 11 (64-bit):
 
 | Package | Description | Download Link |
 |:---|:---|:---|
+| 📦 **Windows Setup Installer** *(Recommended)* | Modern setup wizard with Start Menu, Desktop shortcuts, auto-start option, and clean uninstaller | [**Download BluetoothBatteryMonitor-Setup-v1.0.1.exe**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
 | 🚀 **Standalone Executable** | Single `.exe` ready to run without installation | [**Download BluetoothBatteryMonitor.App.exe**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
-| 📦 **Portable Zip Package** | Full portable distribution archive | [**Download BluetoothBatteryMonitor-win-x64.zip**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
+| 🗜️ **Portable Zip Package** | Full portable distribution archive | [**Download BluetoothBatteryMonitor-win-x64.zip**](https://github.com/Kaandonmez/BluetoothBatteryMonitor/releases/latest) |
 
 > **Requirements:** Windows 10 (Version 2004+) or Windows 11, with [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+> 
+> 💡 *Upgrades preserve all your existing settings, device thresholds, and language preferences automatically in `%APPDATA%\BluetoothBatteryMonitor\`.*
 
 ---
 
@@ -121,9 +124,15 @@ Get the latest official release for Windows 10 & 11 (64-bit):
 - 🌐 **Built-in Local REST API Server:**
   - Embedded zero-dependency HTTP server (`http://127.0.0.1:23253/devices`) with full CORS support for Rainmeter skins, Stream Deck plugins, Home Assistant, or web dashboards.
 
-- 🌍 **Full Multi-Language Support (English & Turkish):**
-  - Complete internationalization (i18n) across all flyout cards, settings, context menus, tooltips, dialogs, and native Windows Toast notifications.
-  - Seamless on-the-fly language switching directly from the Settings window without restarting the application.
+- 🔄 **Built-in Update Checker & Settings Preservation:**
+  - One-click GitHub Releases update verification right from the **Settings** and **About** windows.
+  - Direct download links for new versions with changelog preview.
+  - **Zero Settings Loss Guarantee:** Application configuration, alert thresholds, and language preferences are safely stored in `%APPDATA%\BluetoothBatteryMonitor\settings.json` and persist seamlessly across all updates and installer upgrades.
+
+- 📦 **Professional Windows Installer (Inno Setup):**
+  - Includes a dedicated modern x64 Setup Wizard (`BluetoothBatteryMonitor-Setup-vX.Y.Z.exe`) supporting English and Turkish languages.
+  - Configures Start Menu shortcuts, optional Desktop shortcut, and clean uninstaller in Windows Settings / Control Panel.
+  - Automatically handles upgrading running instances cleanly without touching user preferences.
 
 - ⚡ **Single Instance Architecture:**
   - Enforces a single running instance via system-wide `Mutex`. Launching a second instance signals `EventWaitHandle` to immediately bring the existing flyout window to the foreground.

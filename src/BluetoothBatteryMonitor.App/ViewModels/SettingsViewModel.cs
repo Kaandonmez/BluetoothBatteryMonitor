@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using BluetoothBatteryMonitor.App.Models;
 using BluetoothBatteryMonitor.App.Services.System;
 using BluetoothBatteryMonitor.App.Services.Localization;
+using BluetoothBatteryMonitor.App.Services.Update;
 
 namespace BluetoothBatteryMonitor.App.ViewModels;
 
@@ -334,6 +335,74 @@ public partial class SettingsViewModel : ObservableObject
 
         // Dili uygula
         LocalizationService.ApplyLanguage(SelectedLanguage);
+    }
+
+    private readonly UpdateCheckService _updateService = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCheckUpdates))]
+    private bool _isCheckingUpdates;
+
+    public bool CanCheckUpdates => !IsCheckingUpdates;
+
+    [ObservableProperty]
+    private string? _updateStatusMessage;
+
+    [ObservableProperty]
+    private bool _hasUpdateAvailable;
+
+    [ObservableProperty]
+    private string? _latestUpdateVersion;
+
+    [ObservableProperty]
+    private string? _updateDownloadUrl;
+
+    [RelayCommand]
+    public async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingUpdates) return;
+        IsCheckingUpdates = true;
+        UpdateStatusMessage = LocalizationService.GetString("Update_Checking");
+
+        try
+        {
+            var result = await _updateService.CheckForUpdatesAsync();
+            if (result.HasUpdate)
+            {
+                HasUpdateAvailable = true;
+                LatestUpdateVersion = result.LatestVersion;
+                UpdateDownloadUrl = result.DownloadUrl ?? result.ReleaseUrl;
+                UpdateStatusMessage = LocalizationService.GetString("Update_Available", result.LatestVersion);
+            }
+            else if (!string.IsNullOrEmpty(result.ErrorMessage))
+            {
+                HasUpdateAvailable = false;
+                UpdateStatusMessage = LocalizationService.GetString("Update_Error");
+            }
+            else
+            {
+                HasUpdateAvailable = false;
+                UpdateStatusMessage = LocalizationService.GetString("Update_UpToDate", result.CurrentVersion);
+            }
+        }
+        catch
+        {
+            HasUpdateAvailable = false;
+            UpdateStatusMessage = LocalizationService.GetString("Update_Error");
+        }
+        finally
+        {
+            IsCheckingUpdates = false;
+        }
+    }
+
+    [RelayCommand]
+    public void OpenUpdateDownload()
+    {
+        if (!string.IsNullOrEmpty(UpdateDownloadUrl))
+        {
+            UpdateCheckService.OpenUrl(UpdateDownloadUrl);
+        }
     }
 }
 

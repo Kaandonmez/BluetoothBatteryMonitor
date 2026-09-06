@@ -122,7 +122,17 @@ public static class LocalizationService
             ["Toast_CriticalTitle"] = "⚠️ Critical Battery: {0}",
             ["Toast_CriticalBody"] = "{0} battery is critically low ({1}%). Please recharge immediately!",
             ["Toast_LowTitle"] = "🔋 Low Battery: {0}",
-            ["Toast_LowBody"] = "{0} battery is low ({1}%). You may need to recharge soon."
+            ["Toast_LowBody"] = "{0} battery is low ({1}%). You may need to recharge soon.",
+
+            // Software Updates
+            ["Update_Title"] = "Software Updates",
+            ["Update_Desc"] = "Check GitHub for new features, bug fixes, and hardware protocols",
+            ["Update_CheckNow"] = "Check for Updates",
+            ["Update_Checking"] = "Checking GitHub for updates...",
+            ["Update_UpToDate"] = "You are using the latest version (v{0}).",
+            ["Update_Available"] = "New version available: v{0}!",
+            ["Update_Download"] = "Download & Install Update",
+            ["Update_Error"] = "Could not check for updates. Please try again later."
         },
 
         ["tr"] = new(StringComparer.OrdinalIgnoreCase)
@@ -221,7 +231,17 @@ public static class LocalizationService
             ["Toast_CriticalTitle"] = "⚠️ Kritik Pil: {0}",
             ["Toast_CriticalBody"] = "{0} pili kritik seviyede (%{1}). Lütfen hemen şarj edin!",
             ["Toast_LowTitle"] = "🔋 Düşük Pil: {0}",
-            ["Toast_LowBody"] = "{0} pili azaldı (%{1}). Yakında şarja takmanız gerekebilir."
+            ["Toast_LowBody"] = "{0} pili azaldı (%{1}). Yakında şarja takmanız gerekebilir.",
+
+            // Software Updates
+            ["Update_Title"] = "Yazılım Güncellemeleri",
+            ["Update_Desc"] = "Yeni özellikler, hata düzeltmeleri ve donanım protokolleri için GitHub'ı kontrol edin",
+            ["Update_CheckNow"] = "Güncellemeleri Denetle",
+            ["Update_Checking"] = "GitHub güncellemeleri denetleniyor...",
+            ["Update_UpToDate"] = "Uygulamanız en güncel sürümde! (v{0})",
+            ["Update_Available"] = "Yeni bir sürüm mevcut: v{0}!",
+            ["Update_Download"] = "Güncellemeyi İndir ve Kur",
+            ["Update_Error"] = "Güncellemeler denetlenemedi. Lütfen daha sonra tekrar deneyin."
         }
     };
 
