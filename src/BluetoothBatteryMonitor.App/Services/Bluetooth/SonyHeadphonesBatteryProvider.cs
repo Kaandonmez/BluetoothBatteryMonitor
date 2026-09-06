@@ -27,8 +27,8 @@ public record SonyBatteryInfo(
     string? ModelName = null);
 
 /// <summary>
-/// Sony WH-1000XM3/XM4/XM5 ve WF-1000 serisi (WF-1000XM3/XM4/XM5, LinkBuds) kablosuz kulaklıklar için
-/// Bluetooth RFCOMM SPP (0x0C başlangıç baytlı MDR protokolü) paketlerini ayrıştıran sağlayıcı.
+/// Battery provider for Sony WH-1000XM3/XM4/XM5 and WF-1000 series (WF-1000XM3/XM4/XM5, LinkBuds)
+/// wireless headphones via Bluetooth RFCOMM SPP (0x0C SOM MDR protocol) packets.
 /// </summary>
 public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
 {
@@ -37,7 +37,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
 
     public event EventHandler<BluetoothDeviceModel>? DeviceUpdated;
 
-    // Sony MDR Frame başlangıç ve bitiş belirteci
+    // Sony MDR Frame start and ack delimiters
     public const byte SomByte = 0x0C;
     public const byte AckByte = 0x0E;
 
@@ -56,7 +56,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. Eşleşmiş Sony kulaklıklarını sistemde bul
+            // 1. Discover paired Sony headphones in system
             string selector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
             var deviceInfos = await DeviceInformation.FindAllAsync(selector).AsTask(cancellationToken);
 
@@ -66,7 +66,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             {
                 if (cancellationToken.IsCancellationRequested) break;
 
-                // Önbellekte varsa önce onu kontrol et
+                // Check cache for existing device model
                 if (_devices.TryGetValue(info.Id, out var cached))
                 {
                     var live = await TryQuerySonyRfcommBatteryAsync(info.Id, cancellationToken);
@@ -100,14 +100,14 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
                     LastUpdated = DateTime.Now
                 };
 
-                // PnP üzerinden temel batarya fallback'i
+                // Fallback to basic battery level via PnP
                 if (info.Properties.TryGetValue(PnpBatteryKey, out var pnpVal) && pnpVal != null &&
                     int.TryParse(pnpVal.ToString(), out int bLevel))
                 {
                     devModel.BatteryLevel = bLevel;
                 }
 
-                // RFCOMM SPP üzerinden canlı durum sorgusunu dene
+                // Attempt live status query over RFCOMM SPP
                 var liveBattery = await TryQuerySonyRfcommBatteryAsync(info.Id, cancellationToken);
                 if (liveBattery != null)
                 {
@@ -121,7 +121,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // İstisnayı yakala
+            // Ignore transient scan exception
         }
 
         return resultList;
@@ -154,7 +154,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             using var socket = new StreamSocket();
             await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName).AsTask(cts.Token);
 
-            // Sony MDR Pil Sorgu Paketi (SOM 0x0C, Seq 0x00, Length 0x0001, Command 0x02)
+            // Sony MDR Battery Query Packet (SOM 0x0C, Seq 0x00, Length 0x0001, Command 0x02)
             using var writer = new DataWriter(socket.OutputStream);
             byte[] cmd = [SomByte, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x02, SomByte];
             writer.WriteBytes(cmd);
@@ -180,7 +180,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // RFCOMM bağlantı hatası
+            // RFCOMM connection or read error
         }
 
         return null;
@@ -225,7 +225,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // İstisna yutulur
+                // Silently ignore transient errors
             }
 
             try
@@ -240,8 +240,8 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// Sony MDR RFCOMM SPP (0x0C başlangıçlı) paketini ayrıştırır.
-    /// Tekli kulaklıklar (WH-1000 serisi) veya TWS (WF-1000 serisi) pil formatlarını destekler.
+    /// Parses Sony MDR RFCOMM SPP (0x0C-prefixed) status packets.
+    /// Supports both single headphones (WH-1000 series) and TWS earbuds (WF-1000 series).
     /// </summary>
     public static bool TryParseSonyPacket(byte[] packet, out SonyBatteryInfo? info)
     {
@@ -251,7 +251,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             return false;
         }
 
-        // 0x0C SOM baytını ara
+        // Search for 0x0C SOM delimiter
         int somIndex = -1;
         for (int i = 0; i < packet.Length - 4; i++)
         {
@@ -270,20 +270,20 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
 
         // Byte 0: 0x0C
         // Byte 1: SeqNo
-        // Format 1: 4-bayt büyük sonlu (Big-endian) uzunluk -> Byte 2-5, ardından Function Type Byte 6
-        // Format 2: 2-bayt uzunluk -> Byte 2-3, ardından Function Type Byte 4
+        // Format 1: 4-byte big-endian length -> Bytes 2-5, followed by Function Type Byte 6
+        // Format 2: 2-byte length -> Bytes 2-3, followed by Function Type Byte 4
         int funcIndex;
         int payloadIndex;
 
         if (remaining >= 8 && packet[offset + 2] == 0x00 && packet[offset + 3] == 0x00)
         {
-            // 4-bayt uzunluk
+            // 4-byte length
             funcIndex = offset + 6;
             payloadIndex = offset + 7;
         }
         else
         {
-            // 2-bayt uzunluk
+            // 2-byte length
             funcIndex = offset + 4;
             payloadIndex = offset + 5;
         }
@@ -292,19 +292,19 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
 
         byte funcType = packet[funcIndex];
 
-        // Sony Batarya Fonksiyon Kodları: 0x02, 0x03, 0x22, 0x23, 0x04
+        // Sony Battery Function Codes: 0x02, 0x03, 0x22, 0x23, 0x04
         bool isBatteryFunc = funcType is 0x02 or 0x03 or 0x22 or 0x23 or 0x04;
         if (!isBatteryFunc && funcType != 0x00)
         {
-            // Fonksiyon kodu tam eşleşmese de kalan yükü analiz et
+            // If function code did not strictly match, probe remaining payload
             payloadIndex = funcIndex;
         }
 
         int payloadLength = packet.Length - payloadIndex;
         if (payloadLength <= 0) return false;
 
-        // TWS (WF-1000 serisi) mi yoksa Tekli Kulaklık (WH-1000 serisi) mi?
-        // TWS paketlerinde genelde Sol, Sağ, Kutu için 3 ayrı pil ve şarj durumu yer alır (payload >= 4)
+        // Determine whether device is TWS (WF-1000 series) or Over-Ear (WH-1000 series)
+        // TWS packets usually report Left, Right, Case battery and charge status (payload >= 4)
         if (payloadLength >= 4)
         {
             byte bLeft = packet[payloadIndex];
@@ -312,7 +312,7 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             byte bCase = packet[payloadIndex + 2];
             byte chargeByte = packet[payloadIndex + 3];
 
-            // Eğer Sol ve Sağ geçerli yüzde ise (0-100)
+            // If Left and Right are valid percentages (0-100)
             if (bLeft <= 100 && bRight <= 100)
             {
                 int? left = bLeft;
@@ -340,9 +340,9 @@ public class SonyHeadphonesBatteryProvider : IBluetoothBatteryProvider
             }
         }
 
-        // Tekli Kulaklık (WH-1000 serisi) formatı:
-        // payloadIndex: Pil seviyesi (0-100 veya 0..10 adım)
-        // payloadIndex + 1: Şarj durumu (0=deşarj, 1=şarjda)
+        // Over-Ear single headphone (WH-1000 series) format:
+        // payloadIndex: Battery level (0-100 or 0..10 step)
+        // payloadIndex + 1: Charging status (0=discharging, 1=charging)
         byte rawLevel = packet[payloadIndex];
         int level;
         if (rawLevel <= 10)

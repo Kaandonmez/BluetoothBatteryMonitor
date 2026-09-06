@@ -7,27 +7,27 @@ using Microsoft.Toolkit.Uwp.Notifications;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Kritik pil seviyeleri (%20 ve %10) için Windows Toast bildirimleri üreten akıllı servis.
-/// Spam'i önlemek için cihaz başına 30 dakikalık cooldown ve kademe mekanizması içerir.
+/// Smart service that generates Windows Toast notifications for critical battery levels (20% and 10%).
+/// Includes a 30-minute cooldown per device and tier mechanism to prevent spam.
 /// </summary>
 public class ToastNotificationService
 {
     private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(30);
 
-    // Cihaz kimliği -> (Son bildirim zamanı, Bildirilen son kademe)
-    // Kademe 1: %20 ve altı (Uyarı)
-    // Kademe 2: %10 ve altı (Kritik Acil)
+    // Device ID -> (Last notification timestamp, Last notified tier)
+    // Tier 1: 20% and below (Warning)
+    // Tier 2: 10% and below (Critical Emergency)
     private readonly ConcurrentDictionary<string, (DateTime Timestamp, int Tier)> _notificationHistory = new();
 
     /// <summary>
-    /// Testler ve ayarlar için cooldown süresi.
+    /// Cooldown duration for tests and settings.
     /// </summary>
     public TimeSpan Cooldown => _cooldown;
 
     /// <summary>
-    /// Cihaz pil durumunu denetler ve gerekiyorsa Toast bildirimi gönderir.
+    /// Checks device battery status and sends a Toast notification if needed.
     /// </summary>
-    /// <returns>Bildirim gösterildiyse true, cooldown/seviye nedeniyle gösterilmediyse false döner.</returns>
+    /// <returns>True if notification was shown; false if suppressed due to cooldown/level.</returns>
     public bool CheckAndNotify(BluetoothDeviceModel device)
     {
         if (device == null || !device.IsConnected)
@@ -45,10 +45,10 @@ public class ToastNotificationService
 
         string trackingKey = device.BluetoothAddress != 0 ? device.BluetoothAddress.ToString("X12") : device.Id;
 
-        // Pil şarjdaysa veya %20'nin üzerindeyse uyarı verilmez
+        // No warning if battery is charging or above 20%
         if (device.Battery.IsCharging || currentLevel > 20)
         {
-            // Cihaz şarj edildiyse veya pil yükseldiyse geçmişi sıfırlayarak bir sonraki düşüşe hazır hale getir
+            // If device is charged or battery level increased, reset history to prepare for next drop
             if (currentLevel > 25 && _notificationHistory.ContainsKey(trackingKey))
             {
                 _notificationHistory.TryRemove(trackingKey, out _);
@@ -56,7 +56,7 @@ public class ToastNotificationService
             return false;
         }
 
-        // Kademe belirleme: 1 = %11-%20 arası (Düşük Pil), 2 = %10 ve altı (Kritik Pil)
+        // Determine tier: 1 = 11%-20% (Low Battery), 2 = 10% and below (Critical Battery)
         int currentTier = currentLevel <= 10 ? 2 : 1;
         var now = DateTime.Now;
 
@@ -65,23 +65,23 @@ public class ToastNotificationService
             bool isNewEmergencyTier = currentTier > record.Tier;
             bool isCooldownElapsed = (now - record.Timestamp) >= _cooldown;
 
-            // Cooldown dolmadıysa ve daha acil bir kademeye geçilmediyse bildirimi yut
+            // Suppress notification if cooldown has not elapsed and not moving to a more urgent tier
             if (!isCooldownElapsed && !isNewEmergencyTier)
             {
                 return false;
             }
         }
 
-        // Bildirim kaydını güncelle
+        // Update notification history
         _notificationHistory[trackingKey] = (now, currentTier);
 
-        // Bildirimi gönder
+        // Send notification
         string displayName = !string.IsNullOrWhiteSpace(device.Name) ? device.Name : "Bluetooth Cihazı";
         return SendNotification(displayName, currentLevel, currentTier == 2);
     }
 
     /// <summary>
-    /// Windows Toast Bildirimini ekrana basar.
+    /// Displays the Windows Toast Notification on screen.
     /// </summary>
     public virtual bool SendNotification(string deviceName, int batteryLevel, bool isCritical)
     {
@@ -112,7 +112,7 @@ public class ToastNotificationService
     }
 
     /// <summary>
-    /// Cihaz bildirim geçmişini temizler.
+    /// Clears device notification history.
     /// </summary>
     public void ResetHistory(string? deviceId = null)
     {

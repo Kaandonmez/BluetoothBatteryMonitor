@@ -11,6 +11,12 @@ public partial class AboutWindow : FluentWindow
     public AboutWindow()
     {
         InitializeComponent();
+        try
+        {
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/BluetoothBatteryMonitor.App;component/Assets/app.ico", UriKind.Absolute));
+        }
+        catch { }
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)

@@ -12,7 +12,7 @@ using BluetoothBatteryMonitor.Services;
 namespace BluetoothBatteryMonitor.ViewModels;
 
 /// <summary>
-/// Flyout penceresi ve ana sistem tepsisi durumunu yöneten ViewModel.
+/// ViewModel managing the flyout window and main system tray state.
 /// </summary>
 public partial class MainFlyoutViewModel : ObservableObject
 {
@@ -40,7 +40,7 @@ public partial class MainFlyoutViewModel : ObservableObject
     private string _lastRefreshedTime = string.Empty;
 
     /// <summary>
-    /// Tepsi ikonu güncellenmesi gerektiğinde tetiklenir: (En düşük pil, Şarj oluyor mu).
+    /// Triggered when the tray icon needs to be updated: (Lowest battery, Is charging).
     /// </summary>
     public event Action<int?, bool>? TrayIconUpdateRequested;
 
@@ -147,7 +147,7 @@ public partial class MainFlyoutViewModel : ObservableObject
     {
         HasDevices = Devices.Count > 0;
 
-        // Bağlı ve geçerli pil seviyesine sahip cihazları filtrele (0% dahil)
+        // Filter devices that are connected and have a valid battery level (including 0%)
         var activeWithBattery = Devices
             .Where(d => d.IsConnected && d.HasBattery)
             .OrderBy(d => d.BatteryLevel)
@@ -161,7 +161,7 @@ public partial class MainFlyoutViewModel : ObservableObject
         }
         else
         {
-            // Bağlı olmasa bile bilinen son pil seviyesi varsa
+            // Fallback to any device with known battery level even if not currently connected
             var anyWithBattery = Devices
                 .Where(d => d.HasBattery)
                 .OrderBy(d => d.BatteryLevel)

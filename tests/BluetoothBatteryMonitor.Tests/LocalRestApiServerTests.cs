@@ -60,7 +60,7 @@ public class LocalRestApiServerTests
 
         if (!server.IsRunning)
         {
-            // Eğer ortamda port bağlama izni yoksa testi atla
+            // Skip test if port binding permission is not available in the environment
             return;
         }
 
@@ -85,13 +85,13 @@ public class LocalRestApiServerTests
         Assert.True(first.GetProperty("isConnected").GetBoolean());
         Assert.False(first.GetProperty("isCharging").GetBoolean());
 
-        // Ses bilgisi
+        // Audio information
         var volume = first.GetProperty("volume");
         Assert.True(volume.GetProperty("hasAudioEndpoint").GetBoolean());
         Assert.Equal(70, volume.GetProperty("volumePercent").GetInt32());
         Assert.False(volume.GetProperty("isMuted").GetBoolean());
 
-        // TWS bilgisi
+        // TWS information
         var second = array[1];
         Assert.True(second.GetProperty("isTws").GetBoolean());
         var tws = second.GetProperty("tws");
@@ -179,7 +179,7 @@ public class LocalRestApiServerTests
         using var server1 = new AppApiServer(() => Array.Empty<AppDevice>(), null, port);
         server1.Start();
 
-        // Aynı porta ikinci bir dinleyici açıldığında çökmemeli
+        // Should not crash when a second listener is opened on the same port
         using var server2 = new AppApiServer(() => Array.Empty<AppDevice>(), null, port);
         var ex = Record.Exception(() => server2.Start());
 
@@ -242,25 +242,25 @@ public class LocalRestApiServerTests
 
         using var client = new HttpClient();
 
-        // 1. İlk portta yanıt vermeli
+        // 1. Should respond on initial port
         var res1 = await client.GetAsync($"http://127.0.0.1:{initialPort}/devices");
         Assert.Equal(HttpStatusCode.OK, res1.StatusCode);
 
-        // 2. Yeni porta restart yapılmalı
+        // 2. Should restart on new port
         server.Restart(newPort);
         Assert.Equal(newPort, server.Port);
         Assert.True(server.IsRunning);
 
-        // 3. Yeni portta çalışmalı
+        // 3. Should work on new port
         var res2 = await client.GetAsync($"http://127.0.0.1:{newPort}/devices");
         Assert.Equal(HttpStatusCode.OK, res2.StatusCode);
     }
 
     [Theory]
-    [InlineData(80, 23253)] // 1024'ten küçük
-    [InlineData(70000, 23253)] // 65535'ten büyük
-    [InlineData(8080, 8080)] // Geçerli
-    [InlineData(23253, 23253)] // Varsayılan
+    [InlineData(80, 23253)] // Smaller than 1024
+    [InlineData(70000, 23253)] // Greater than 65535
+    [InlineData(8080, 8080)] // Valid
+    [InlineData(23253, 23253)] // Default
     public void ClampPort_ValidatesPortRanges(int input, int expected)
     {
         int result = AppApiServer.ClampPort(input);

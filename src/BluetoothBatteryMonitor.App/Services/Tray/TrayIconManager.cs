@@ -61,7 +61,7 @@ public class TrayIconManager : IDisposable
             MenuActivation = PopupActivationMode.RightClick
         };
 
-        // Sağ tık menüsü açılmadan önce açık olan Flyout'u derhal kapat
+        // Close active Flyout immediately before displaying context menu
         _taskbarIcon.TrayRightMouseDown += (s, e) =>
         {
             _flyoutWindow.HideImmediately();
@@ -72,21 +72,21 @@ public class TrayIconManager : IDisposable
             _flyoutWindow.HideImmediately();
         };
 
-        // Sol tık MouseDown: Tıklamanın başladığı anda Flyout'un açık olup olmadığını kaydet
+        // Left mouse button down: Record whether the flyout was already open when clicked
         _taskbarIcon.TrayLeftMouseDown += (s, e) =>
         {
             _flyoutWasOpenOnMouseDown = _flyoutWindow.IsFlyoutOpen;
             if (_flyoutWasOpenOnMouseDown)
             {
-                // Kullanıcı açık olan pencereyi kapatmak için tıkladı: Anında gizle
+                // User clicked to dismiss the currently open window: Hide immediately
                 _flyoutWindow.HideImmediately();
             }
         };
 
-        // Sol tık ile Flyout açma/kapatma (MouseUp ile Windows shell odak çakışması engellenir)
+        // Left mouse button up: Toggle flyout window (MouseUp avoids Windows shell focus race condition)
         _taskbarIcon.TrayLeftMouseUp += (s, e) =>
         {
-            // Eğer ContextMenu açıksa veya az önce kapandıysa, menüyü kapatıp Flyout'u göster
+            // If ContextMenu is open or was just closed, dismiss menu and display flyout
             if (_contextMenu != null && (_contextMenu.IsOpen || (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250))
             {
                 _contextMenu.IsOpen = false;
@@ -95,18 +95,18 @@ public class TrayIconManager : IDisposable
                 return;
             }
 
-            // Eğer fareye basıldığında Flyout zaten açıktıysa, kullanıcı pencereyi kapatmak için tıklamıştır (tekrar açma)
+            // If Flyout was open when clicked, the intent was dismissal (do not reopen)
             if (_flyoutWasOpenOnMouseDown)
             {
                 _flyoutWasOpenOnMouseDown = false;
                 return;
             }
 
-            // Flyout kapalıydı, aç
+            // Flyout was closed, show it
             _flyoutWindow.ShowFlyout();
         };
 
-        // Çift tık ile Flyout penceresini aç
+        // Double click: Open flyout window
         _taskbarIcon.TrayMouseDoubleClick += (s, e) =>
         {
             _flyoutWindow.ShowFlyout();
@@ -119,7 +119,7 @@ public class TrayIconManager : IDisposable
         }
         catch (Exception ex)
         {
-            global::System.Diagnostics.Debug.WriteLine($"[TrayIconManager] Tepsi simgesi ilk açılışta zorlanamadı: {ex.Message}");
+            global::System.Diagnostics.Debug.WriteLine($"[TrayIconManager] Failed to force create tray icon on initial launch: {ex.Message}");
         }
     }
 
@@ -129,10 +129,10 @@ public class TrayIconManager : IDisposable
 
         menu.Opened += (s, e) =>
         {
-            // Flyout açıksa derhal kapat
+            // Dismiss flyout immediately if open
             _flyoutWindow.HideImmediately();
 
-            // Win32 NotifyIcon kuralı: Dışarı tıklandığında menünün kapanabilmesi için ContextMenu'yu ön plana al
+            // Win32 NotifyIcon standard: Set foreground window to ensure context menu dismisses when clicking outside
             if (PresentationSource.FromVisual(menu) is HwndSource hwndSource)
             {
                 _contextMenuHwnd = hwndSource.Handle;
@@ -166,14 +166,14 @@ public class TrayIconManager : IDisposable
             IsCheckable = true,
             IsChecked = StartupManager.IsStartupEnabled()
         };
-        // Menü her açıldığında gerçek başlangıç durumunu yansıt
+        // Sync actual startup state each time menu opens
         menu.Opened += (s, e) =>
         {
             startupItem.IsChecked = StartupManager.IsStartupEnabled();
         };
         startupItem.Click += (s, e) =>
         {
-            // WPF MenuItem IsCheckable=true olduğunda tıklamada IsChecked durumunu otomatik değiştirir
+            // WPF MenuItem IsCheckable=true automatically toggles IsChecked upon click
             bool newState = startupItem.IsChecked;
             StartupManager.SetStartup(newState);
             var settings = AppSettings.Load();
@@ -233,7 +233,7 @@ public class TrayIconManager : IDisposable
             catch { }
         }
 
-        // Tooltip metnini güncelle
+        // Update tooltip text
         if (_mainViewModel.Devices.Count > 0)
         {
             var summary = string.Join("\n", _mainViewModel.Devices.Take(4).Select(d => $"{d.Name}: {d.BatteryText}"));

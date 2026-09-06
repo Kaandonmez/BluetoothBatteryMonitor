@@ -18,8 +18,8 @@ public record LogitechBatteryInfo(
     string StatusDescription);
 
 /// <summary>
-/// Logitech Bluetooth ve kablosuz cihazlar (Fare, Klavye vb.) için HID++ 1.0 ve HID++ 2.0
-/// (Feature 0x1000: Battery Status ve Feature 0x1004: Unified Battery) protokollerini sorgulayan sağlayıcı.
+/// Provider querying HID++ 1.0 and HID++ 2.0 protocols (Feature 0x1000: Battery Status
+/// and Feature 0x1004: Unified Battery) for Logitech Bluetooth and wireless devices (Mice, Keyboards, etc.).
 /// </summary>
 public class LogitechHidBatteryProvider
 {
@@ -46,19 +46,19 @@ public class LogitechHidBatteryProvider
     }
 
     /// <summary>
-    /// Sistemdeki Logitech HID cihazlarını tarar ve pil raporlarını sorgular.
+    /// Scans Logitech HID devices on the system and queries battery reports.
     /// </summary>
     public async Task RefreshAsync()
     {
         try
         {
-            // Windows HID cihaz arayüz sınıfı GUID'i: {4D1E55B2-F16F-11CF-88CB-001111000030}
+            // Windows HID device interface class GUID: {4D1E55B2-F16F-11CF-88CB-001111000030}
             string selector = "System.Devices.InterfaceClassGuid:=\"{4D1E55B2-F16F-11CF-88CB-001111000030}\"";
             var hidDevices = await DeviceInformation.FindAllAsync(selector);
 
             foreach (var dev in hidDevices)
             {
-                // VID_046D kontrolü
+                // VID_046D check
                 if (dev.Id.Contains("VID_046D", StringComparison.OrdinalIgnoreCase) ||
                     dev.Name.Contains("Logitech", StringComparison.OrdinalIgnoreCase))
                 {
@@ -76,8 +76,8 @@ public class LogitechHidBatteryProvider
     {
         try
         {
-            // Cihaz dosya yolunu açarak HID Feature / Report sorgulaması
-            // HID++ sorguları için SafeFileHandle ve HidD_GetFeature kullanılır
+            // Query HID Feature / Report by opening device file path
+            // Uses SafeFileHandle and HidD_GetFeature for HID++ queries
             using var handle = NativeMethods.CreateFile(
                 dev.Id,
                 NativeMethods.GENERIC_READ | NativeMethods.GENERIC_WRITE,
@@ -89,11 +89,11 @@ public class LogitechHidBatteryProvider
 
             if (!handle.IsInvalid)
             {
-                // 1. HID++ 2.0 Feature 0x1004 (Unified Battery) sorgusu
-                // Long report (20 bayt): [0x11, DevIndex, FeatureIndex, Func/SwID, 0, ...]
+                // 1. HID++ 2.0 Feature 0x1004 (Unified Battery) query
+                // Long report (20 bytes): [0x11, DevIndex, FeatureIndex, Func/SwID, 0, ...]
                 byte[] request = new byte[20];
                 request[0] = 0x11; // HID++ Long Report ID
-                request[1] = 0xFF; // Device index (alıcı veya doğrudan cihaz)
+                request[1] = 0xFF; // Device index (receiver or direct device)
 
                 byte[] response = new byte[20];
                 if (NativeMethods.HidD_GetFeature(handle, response, (uint)response.Length))
@@ -111,7 +111,7 @@ public class LogitechHidBatteryProvider
             Debug.WriteLine($"[LogitechHidBatteryProvider] Cihaz okuma istisnası ({dev.Name}): {ex.Message}");
         }
 
-        // HID handle doğrudan açılamadıysa (ör. Windows koruması), PnP fallback kontrolü
+        // If HID handle could not be opened directly (e.g. Windows protection), PnP fallback check
         if (dev.Properties.TryGetValue(WindowsPnpBatteryProvider.PnpBatteryLevelKey, out var pnpLvl) && pnpLvl != null)
         {
             try
@@ -147,8 +147,8 @@ public class LogitechHidBatteryProvider
     }
 
     /// <summary>
-    /// HID++ 1.0 / 2.0 yanıt baytlarını çözümler.
-    /// Feature 0x1000 (Battery Status) ve 0x1004 (Unified Battery) desteklenir.
+    /// Decodes HID++ 1.0 / 2.0 response bytes.
+    /// Supports Feature 0x1000 (Battery Status) and 0x1004 (Unified Battery).
     /// </summary>
     public static bool TryParseLogitechBatteryReport(byte[] report, out LogitechBatteryInfo? info)
     {
@@ -160,12 +160,12 @@ public class LogitechHidBatteryProvider
 
         byte reportId = report[0];
 
-        // HID++ Long Report (0x11) veya Short Report (0x10)
+        // HID++ Long Report (0x11) or Short Report (0x10)
         if (reportId == 0x11 && report.Length >= 7)
         {
-            // HID++ 2.0 Unified Battery (0x1004) formatı:
-            // report[4]: Pil yüzdesi (0-100)
-            // report[5]: Şarj durumu (0=Deşarj, 1=Şarj oluyor, 2=Tam dolu)
+            // HID++ 2.0 Unified Battery (0x1004) format:
+            // report[4]: Battery percentage (0-100)
+            // report[5]: Charging status (0=Discharging, 1=Charging, 2=Full)
             byte percentage = report[4];
             byte status = report[5];
 
@@ -183,7 +183,7 @@ public class LogitechHidBatteryProvider
                 return true;
             }
 
-            // Alternatif: Feature 0x1000 (Battery Status) formatı:
+            // Alternative: Feature 0x1000 (Battery Status) format:
             // report[4]: level (0-100), report[6]: charging status
             byte altPercent = report[4];
             if (altPercent <= 100)

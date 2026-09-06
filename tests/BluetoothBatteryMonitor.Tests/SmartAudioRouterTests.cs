@@ -87,7 +87,7 @@ public class SmartAudioRouterTests
 
         router.OnDevicesUpdated(new[] { device }, settings);
 
-        // Varsayılan çıkış kulaklığa geçmeli
+        // Default output should switch to headphones
         Assert.Equal("BT_HEADPHONE_ID", mockAudio.DefaultEndpointId);
         Assert.Equal("SPEAKER_DEFAULT_ID", router.PreviousDefaultEndpointId);
         Assert.Equal("BT_HEADPHONE_ID", router.ActiveEndpointId);
@@ -113,7 +113,7 @@ public class SmartAudioRouterTests
 
         router.OnDevicesUpdated(new[] { device }, settings);
 
-        // Değişiklik olmamalı
+        // There should be no change
         Assert.Equal("SPEAKER_DEFAULT_ID", mockAudio.DefaultEndpointId);
         Assert.Null(router.ActiveEndpointId);
     }
@@ -159,11 +159,11 @@ public class SmartAudioRouterTests
             IsConnected = true
         };
 
-        // 1. Bağlandı -> kulaklığa geçti
+        // 1. Connected -> switched to headphones
         router.OnDevicesUpdated(new[] { device }, settings);
         Assert.Equal("BT_HEADPHONE_ID", mockAudio.DefaultEndpointId);
 
-        // 2. Bağlantı koptu -> eski varsayılan hoparlöre dönmeli
+        // 2. Disconnected -> should fall back to previous default speaker
         device.IsConnected = false;
         router.OnDevicesUpdated(new[] { device }, settings);
 
@@ -193,16 +193,16 @@ public class SmartAudioRouterTests
             CaseBatteryLevel = 100
         };
 
-        // Bağlandı
+        // Connected
         router.OnDevicesUpdated(new[] { airpods }, settings);
         Assert.Equal("BT_AIRPODS_ID", mockAudio.DefaultEndpointId);
 
-        // Kutuya kondu (sol ve sağ kulaklık yayını kesti / pilleri null oldu)
+        // Placed in case (left and right earbuds stopped transmitting / their batteries became null)
         airpods.LeftBatteryLevel = null;
         airpods.RightBatteryLevel = null;
         router.OnDevicesUpdated(new[] { airpods }, settings);
 
-        // Hoparlöre geri dönmeli
+        // Should revert to speaker
         Assert.Equal("SPEAKER_DEFAULT_ID", mockAudio.DefaultEndpointId);
         Assert.Null(router.ActiveEndpointId);
     }
@@ -224,16 +224,16 @@ public class SmartAudioRouterTests
             IsConnected = true
         };
 
-        // Tick 1: Kulaklık bağlandı ama Windows CoreAudio endpoint henüz hazır değil
+        // Tick 1: Headphones connected but Windows CoreAudio endpoint is not ready yet
         router.OnDevicesUpdated(new[] { device }, settings);
         Assert.Equal("SPEAKER_DEFAULT_ID", mockAudio.DefaultEndpointId);
         Assert.Null(router.ActiveEndpointId);
 
-        // Tick 2: Windows CoreAudio endpoint artık hazır ve enumerate edildi
+        // Tick 2: Windows CoreAudio endpoint is now ready and enumerated
         mockAudio.Endpoints.Add(new AppAudioDeviceInfo("BT_HEADPHONE_ID", "Sony WH-1000XM4", null, false, 0.8f, false));
         router.OnDevicesUpdated(new[] { device }, settings);
 
-        // Şimdi otomatik olarak kulaklığa geçmeli!
+        // Should now automatically switch to headphones!
         Assert.Equal("BT_HEADPHONE_ID", mockAudio.DefaultEndpointId);
         Assert.Equal("BT_HEADPHONE_ID", router.ActiveEndpointId);
         Assert.Equal("SPEAKER_DEFAULT_ID", router.PreviousDefaultEndpointId);
@@ -257,19 +257,19 @@ public class SmartAudioRouterTests
             IsConnected = true,
             IsTws = true,
             BatteryLevel = 75,
-            LeftBatteryLevel = null, // Henüz sol/sağ ayrımı gelmedi veya tek parça raporlanıyor
+            LeftBatteryLevel = null, // Left/right distinction not yet received or reported as composite
             RightBatteryLevel = null,
             CaseBatteryLevel = null
         };
 
-        // Bağlandı
+        // Connected
         router.OnDevicesUpdated(new[] { wf1000 }, settings);
         Assert.Equal("BT_WF1000_ID", mockAudio.DefaultEndpointId);
 
-        // İkinci güncelleme (hala tek batarya ile bağlı)
+        // Second update (still connected with single battery)
         router.OnDevicesUpdated(new[] { wf1000 }, settings);
 
-        // Yanlışlıkla kutuya konmuş sanılıp hoparlöre dönülmemeli!
+        // Should not mistakenly assume it was put in case and fall back to speaker!
         Assert.Equal("BT_WF1000_ID", mockAudio.DefaultEndpointId);
         Assert.Equal("BT_WF1000_ID", router.ActiveEndpointId);
     }

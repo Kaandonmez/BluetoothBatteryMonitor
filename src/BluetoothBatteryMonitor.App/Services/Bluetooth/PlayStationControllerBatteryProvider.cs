@@ -18,8 +18,8 @@ public record PlayStationBatteryInfo(
     string ModelName);
 
 /// <summary>
-/// Sony DualShock 4 ve DualSense (PS5) kablosuz oyun kollarını Bluetooth HID üzerinden
-/// telemetri moduna geçirerek (DS4: Report 0x11, DualSense: Report 0x31) pil ve şarj durumunu okuyan sağlayıcı.
+/// Provider that switches Sony DualShock 4 and DualSense (PS5) wireless gamepads to Bluetooth HID
+/// telemetry mode (DS4: Report 0x11, DualSense: Report 0x31) to read battery percentage and charging state.
 /// </summary>
 public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
 {
@@ -50,7 +50,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. PnP Cihazları ve Standart Batarya Özelliklerini Tara
+            // 1. Scan PnP devices and standard battery properties
             string aqs = $"(System.Devices.DeviceInstanceId:~~\"{SonyVendorId}\")";
             var props = new[]
             {
@@ -97,7 +97,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
                 resultList.Add(model);
             }
 
-            // 2. Win32 HID Interface üzerinden Doğrudan Telemetri Raporlarını Oku
+            // 2. Read direct telemetry reports via Win32 HID interface
             string hidSelector = $"System.Devices.InterfaceClassGuid:=\"{HidInterfaceGuid}\"";
             var hidDevices = await DeviceInformation.FindAllAsync(hidSelector).AsTask(cancellationToken);
 
@@ -130,7 +130,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
                         LastUpdated = DateTime.Now
                     };
 
-                    // PnP kaydı varsa onun yerine daha hassas telemetriyi koy
+                    // Replace PnP entry with higher precision HID telemetry if present
                     var existingIdx = resultList.FindIndex(d => d.Matches(model));
                     if (existingIdx >= 0)
                     {
@@ -147,38 +147,38 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Tarama istisnasını yakala
+            // Suppress scan error
         }
 
         return resultList;
     }
 
     /// <summary>
-    /// DualShock 4 kolunu Bluetooth üzerinden genişletilmiş telemetri moduna (Report 0x11) geçirecek çıkış raporunu üretir.
+    /// Generates output report to switch DualShock 4 to extended Bluetooth telemetry mode (Report 0x11).
     /// </summary>
     public static byte[] CreateDualShock4ModeSwitchReport()
     {
         byte[] report = new byte[78];
         report[0] = 0x11; // Report ID 0x11
-        report[1] = 0x80; // Telemetri veri akış bayrağı
-        report[3] = 0x04; // Motor/LED yapılandırma bayrağı
+        report[1] = 0x80; // Telemetry data stream flag
+        report[3] = 0x04; // Motor/LED config flag
         return report;
     }
 
     /// <summary>
-    /// DualSense (PS5) kolunu Bluetooth üzerinden genişletilmiş telemetri moduna (Report 0x31) geçirecek çıkış raporunu üretir.
+    /// Generates output report to switch DualSense (PS5) to extended Bluetooth telemetry mode (Report 0x31).
     /// </summary>
     public static byte[] CreateDualSenseModeSwitchReport()
     {
         byte[] report = new byte[78];
         report[0] = 0x31; // Report ID 0x31
-        report[1] = 0x02; // Tag / Sequence baytı
-        report[2] = 0x03; // Telemetri ve özellik bayrakları
+        report[1] = 0x02; // Tag / Sequence byte
+        report[2] = 0x03; // Telemetry and feature flags
         return report;
     }
 
     /// <summary>
-    /// Sony PlayStation kolunu Bluetooth HID telemetri moduna geçirmek için özel çıkış raporunu gönderir.
+    /// Sends output report to switch PlayStation controller to Bluetooth HID telemetry mode.
     /// </summary>
     public static bool SwitchControllerToTelemetryMode(SafeFileHandle handle, ushort pid)
     {
@@ -191,13 +191,13 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
                 ? CreateDualSenseModeSwitchReport()
                 : CreateDualShock4ModeSwitchReport();
 
-            // 1. Önce HidD_SetOutputReport ile dene
+            // 1. Try HidD_SetOutputReport first
             if (NativeMethods.HidD_SetOutputReport(handle, switchReport, switchReport.Length))
             {
                 return true;
             }
 
-            // 2. WriteFile ile dene
+            // 2. Try WriteFile
             if (NativeMethods.WriteFile(handle, switchReport, (uint)switchReport.Length, out _, IntPtr.Zero))
             {
                 return true;
@@ -205,7 +205,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Mod değiştirme desteklenmiyor veya yetki yetersiz
+            // Mode switch unsupported or permission denied
         }
 
         return false;
@@ -226,7 +226,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
 
             if (handle.IsInvalid)
             {
-                // Salt okuma modunda tekrar dene
+                // Retry in read-only mode
                 using var readHandle = NativeMethods.CreateFile(
                     devicePath,
                     NativeMethods.GENERIC_READ,
@@ -240,7 +240,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
                 return await ReadTelemetryReportAsync(readHandle, pid, cancellationToken);
             }
 
-            // Kolu Bluetooth telemetri moduna geçir (DS4: Report 0x11, DualSense: Report 0x31)
+            // Switch controller to Bluetooth telemetry mode (DS4: Report 0x11, DualSense: Report 0x31)
             SwitchControllerToTelemetryMode(handle, pid);
 
             return await ReadTelemetryReportAsync(handle, pid, cancellationToken);
@@ -281,7 +281,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Okuma hatası
+                // Read error
             }
 
             return null;
@@ -327,7 +327,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // İstisna sessizce geçilir
+                // Suppress exception
             }
 
             try
@@ -342,7 +342,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// DualShock 4 HID Input Report 0x11 (Bluetooth Telemetri) veya 0x01 (Temel) baytlarını ayrıştırır.
+    /// Parses DualShock 4 HID Input Report 0x11 (Bluetooth Telemetry) or 0x01 (Basic) bytes.
     /// </summary>
     public static bool TryParseDualShock4Report(byte[] report, out int? batteryLevel, out bool isCharging)
     {
@@ -356,7 +356,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
 
         byte reportId = report[0];
 
-        // 1. Bluetooth Extended Telemetry Report (0x11) - Uzunluk >= 31
+        // 1. Bluetooth Extended Telemetry Report (0x11) - Length >= 31
         if (reportId == 0x11 && report.Length >= 31)
         {
             byte batByte = report[30];
@@ -369,7 +369,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
             }
             else if (rawLevel == 11)
             {
-                // Bazı DS4 modellerinde 11 değeri kablo takılı tam şarjı (%100) simgeler
+                // On certain DS4 models raw value 11 signifies plugged-in full charge (100%)
                 batteryLevel = 100;
                 isCharging = true;
             }
@@ -381,7 +381,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
             return true;
         }
 
-        // 2. Standart Basic Report (0x01) - Uzunluk >= 13
+        // 2. Standart Basic Report (0x01) - Length >= 13
         if (reportId == 0x01 && report.Length >= 13)
         {
             byte batByte = report[12];
@@ -396,7 +396,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// DualSense (PS5) HID Input Report 0x31 (Bluetooth Telemetri) veya 0x01 baytlarını ayrıştırır.
+    /// Parses DualSense (PS5) HID Input Report 0x31 (Bluetooth Telemetry) or 0x01 bytes.
     /// </summary>
     public static bool TryParseDualSenseReport(byte[] report, out int? batteryLevel, out bool isCharging)
     {
@@ -410,7 +410,7 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
 
         byte reportId = report[0];
 
-        // 1. Bluetooth Extended Report 0x31 - Batarya verisi index 53'te
+        // 1. Bluetooth Extended Report 0x31 - Battery data at index 53
         if (reportId == 0x31 && report.Length >= 54)
         {
             byte batByte = report[53];
@@ -418,13 +418,13 @@ public class PlayStationControllerBatteryProvider : IBluetoothBatteryProvider
             int chargeStatus = (batByte >> 4) & 0x0F;
 
             batteryLevel = Math.Min(100, rawLevel * 10);
-            // 0: deşarj, 1: şarj ediliyor, 2: tam dolu
+            // 0: discharging, 1: charging, 2: full
             isCharging = chargeStatus is 1 or 2;
 
             return true;
         }
 
-        // 2. USB veya Alternatif Report 0x01 - Batarya index 53 veya 52'de
+        // 2. USB or Alternative Report 0x01 - Battery data at index 53 or 52
         if (reportId == 0x01 && report.Length >= 54)
         {
             byte batByte = report[53];

@@ -16,7 +16,7 @@ public class AudioEndpointManagerRealTests
 
         Assert.NotNull(endpoints);
 
-        // Windows sisteminde en azından enumerator çağrısı başarılı olmalıdır
+        // On Windows systems, at least the enumerator call should succeed
         string? defaultId = manager.GetDefaultPlaybackDeviceId();
         if (!string.IsNullOrEmpty(defaultId))
         {
@@ -24,14 +24,14 @@ public class AudioEndpointManagerRealTests
             Assert.NotNull(volumeInfo);
             Assert.InRange(volumeInfo.Value.VolumePercent, 0.0f, 1.0f);
 
-            // Mevcut ses seviyesini ve mute durumunu koruyarak SetVolume ve SetMute testi
+            // Test SetVolume and SetMute while preserving current volume and mute state
             bool setVolSuccess = manager.SetVolume(defaultId, volumeInfo.Value.VolumePercent);
             Assert.True(setVolSuccess);
 
             bool setMuteSuccess = manager.SetMute(defaultId, volumeInfo.Value.IsMuted);
             Assert.True(setMuteSuccess);
 
-            // SetDefaultPlaybackDevice testi (halihazırdaki varsayılan aygıtı tekrar varsayılan yaparak güvenle test et)
+            // SetDefaultPlaybackDevice test (safely test by re-setting the existing default device as default)
             bool setDefaultSuccess = manager.SetDefaultPlaybackDevice(defaultId);
             Assert.True(setDefaultSuccess);
         }

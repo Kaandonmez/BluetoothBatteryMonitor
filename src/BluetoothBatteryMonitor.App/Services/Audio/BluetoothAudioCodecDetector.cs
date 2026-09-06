@@ -30,18 +30,18 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
         if (device == null) return null;
         if (!device.IsConnected) return null;
 
-        // Yalnızca ses aktarabilen cihazlar (Kulaklık, Earbuds, Hoparlör vb.) için kodek geçerlidir
+        // Codec is only applicable to audio-rendering devices (Headphones, Earbuds, Speaker, etc.)
         bool isAudio = device.Type is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker || endpoint != null || IsProbableAudioDevice(device);
         if (!isAudio) return null;
 
-        // 1. Aşama: Alternatif A2DP Sürücüsü (Alternative A2DP Driver) Kayıt Defteri Kontrolü (HKCU ve HKLM)
+        // Stage 1: Alternative A2DP Driver Registry Inspection (HKCU and HKLM)
         string? altDriverCodec = CheckAlternativeA2dpDriver(device);
         if (!string.IsNullOrEmpty(altDriverCodec))
         {
             return NormalizeCodecName(altDriverCodec);
         }
 
-        // 2. Aşama: Ses Çıkış Noktası (Endpoint) ve Biçim Özellikleri Kontrolü
+        // Stage 2: Audio Endpoint & Format Properties Inspection
         if (endpoint != null)
         {
             string? epCodec = CheckEndpointProperties(endpoint);
@@ -51,21 +51,21 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
             }
         }
 
-        // 3. Aşama: Windows Kayıt Defteri BthA2dp ve Donanım Parametreleri (PnP A2DP Sink)
+        // Stage 3: Windows BthA2dp Registry and Hardware Parameters (PnP A2DP Sink)
         string? regCodec = CheckWindowsA2dpRegistry(device);
         if (!string.IsNullOrEmpty(regCodec))
         {
             return NormalizeCodecName(regCodec);
         }
 
-        // 4. Aşama: Windows Olay Günlükleri (Event Log / ETW A2dpStreaming) - Cihaza Özel Eşleşme
+        // Stage 4: Windows Event Log (ETW A2dpStreaming) - Device Specific Match
         string? eventLogCodec = CheckWindowsEventLogs(device);
         if (!string.IsNullOrEmpty(eventLogCodec))
         {
             return NormalizeCodecName(eventLogCodec);
         }
 
-        // 5. Aşama: Eğer modelde önceden doğrulanmış bir kodek varsa onu koru; yoksa akıllı donanım ve OS müzakeresi yap
+        // Stage 5: Preserve previously verified codec if present; otherwise infer via OS and hardware catalog
         if (!string.IsNullOrWhiteSpace(device.AudioCodec))
         {
             return NormalizeCodecName(device.AudioCodec);
@@ -82,14 +82,14 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
             ulong mac = device.BluetoothAddress != 0 ? device.BluetoothAddress : BluetoothDeviceModel.ExtractMacAddress(device.Id);
             string macHex = mac != 0 ? mac.ToString("X12") : string.Empty;
 
-            // Önce HKCU (Kullanıcı yapılandırması), sonra HKLM kontrol edilir
+            // Check HKCU (user configuration) first, then HKLM
             RegistryHive[] hives = { RegistryHive.CurrentUser, RegistryHive.LocalMachine };
 
             foreach (var hive in hives)
             {
                 foreach (var baseKey in baseKeys)
                 {
-                    // Cihaza özel ayar
+                    // Device specific setting
                     if (!string.IsNullOrEmpty(macHex))
                     {
                         string devSubKey = $@"{baseKey}\Devices\{macHex}";
@@ -100,7 +100,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
                         if (devCodec != null) return devCodec.ToString();
                     }
 
-                    // Global aktif kodek
+                    // Global active codec
                     var globalCodec = ReadRegistryValue(baseKey, "ActiveCodec", hive) ??
                                       ReadRegistryValue(baseKey, "SelectedCodec", hive) ??
                                       ReadRegistryValue(baseKey, "Codec", hive) ??
@@ -111,7 +111,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
         }
         catch
         {
-            // Registry okuma hatasını güvenle yut
+            // Ignore registry read error
         }
 
         return null;
@@ -151,22 +151,22 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
                                ReadRegistryValue(devSubKey, "A2dpCodec");
                 if (codecVal != null) return codecVal.ToString();
 
-                // PnP A2DP Sink Cihaz Parametreleri Kontrolü (HKLM\SYSTEM\CurrentControlSet\Enum\BTHENUM\{0000110b-...})
+                // PnP A2DP Sink Device Parameters Check (HKLM\SYSTEM\CurrentControlSet\Enum\BTHENUM\{0000110b-...})
                 string? pnpCodec = CheckPnpA2dpKeys(macHex);
                 if (!string.IsNullOrEmpty(pnpCodec)) return pnpCodec;
             }
 
-            // AAC'nin Windows genelinde devre dışı bırakılıp bırakılmadığı kontrol edilir
+            // Check if AAC is globally disabled in Windows
             var aacEnableVal = ReadRegistryValue(bthA2dpParams, "BluetoothAacEnable") ?? ReadRegistryValue(bthA2dpParams, "AacEnable");
             if (aacEnableVal is int intAac && intAac == 0)
             {
-                // AAC açıkça kapatılmış: aptX veya SBC'ye düşer
+                // AAC is explicitly disabled: fallback to aptX or SBC
                 return IsAptxCapableDevice(device) ? "aptX" : "SBC";
             }
         }
         catch
         {
-            // Registry okuma hatası
+            // Ignore registry read error
         }
 
         return null;
@@ -182,7 +182,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
 
             foreach (var subName in bthenumKey.GetSubKeyNames())
             {
-                // {0000110b-0000-1000-8000-00805f9b34fb} A2DP Audio Sink Service UUID'sidir
+                // {0000110b-0000-1000-8000-00805f9b34fb} is A2DP Audio Sink Service UUID
                 if (!subName.Contains("{0000110b-", StringComparison.OrdinalIgnoreCase)) continue;
 
                 using var devKey = bthenumKey.OpenSubKey(subName);
@@ -209,7 +209,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
         }
         catch
         {
-            // PnP sorgulama hatası
+            // Ignore PnP query error
         }
 
         return null;
@@ -224,7 +224,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
             string macColon = mac != 0 ? string.Join(":", Enumerable.Range(0, 6).Select(i => ((mac >> ((5 - i) * 8)) & 0xFF).ToString("X2"))) : string.Empty;
             string devName = (device.Name ?? string.Empty).Trim();
 
-            // Cihazı ayırt edebilecek herhangi bir tanımlayıcı yoksa yanlış cihazın günlüğünü okumamak için çık
+            // Return early if no identifiable property exists to avoid parsing wrong device log
             if (string.IsNullOrEmpty(macHex) && string.IsNullOrEmpty(devName)) return null;
 
             string query = "*[System[Provider[@Name='Microsoft-Windows-Bluetooth-Policy' or @Name='Microsoft-Windows-BTH-BTHUSB' or @Name='Microsoft-Windows-Bluetooth-Audio'] and TimeCreated[timediff(@SystemTime) <= 86400000]]]";
@@ -237,7 +237,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
                     string xml = ev.ToXml();
                     if (string.IsNullOrEmpty(xml)) continue;
 
-                    // Olayın kesinlikle bu cihaza ait olduğunu doğrula (MAC veya belirgin isim eşleşmesi)
+                    // Verify the event belongs to this device (via MAC or distinct name)
                     bool belongsToDevice = false;
                     if (!string.IsNullOrEmpty(macHex) && xml.Contains(macHex, StringComparison.OrdinalIgnoreCase)) belongsToDevice = true;
                     else if (!string.IsNullOrEmpty(macColon) && xml.Contains(macColon, StringComparison.OrdinalIgnoreCase)) belongsToDevice = true;
@@ -260,7 +260,7 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
         }
         catch
         {
-            // Olay günlüğü erişim izni yoksa veya kanal bulunamadıysa sessizce geçilir
+            // Silently pass if event log permissions are restricted or channel not found
         }
 
         return null;
@@ -281,31 +281,31 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
         string model = (device.ModelName ?? string.Empty).Trim();
         string combined = $"{name} {model}".Trim();
 
-        // 1. Apple ve Beats Ailesi (Yalnızca AAC ve SBC destekler)
+        // 1. Apple & Beats Family (AAC and SBC only)
         if (IsAppleOrBeatsAudio(combined))
         {
             return _osBuildNumber >= 19044 ? "AAC" : "SBC";
         }
 
-        // 2. Sony Kulaklıklar (LDAC, AAC, SBC; eski modellerde aptX)
+        // 2. Sony Headphones (LDAC, AAC, SBC; aptX on legacy)
         if (IsSonyAudio(combined))
         {
             return _osBuildNumber >= 19044 ? "AAC" : "SBC";
         }
 
-        // 3. Samsung Galaxy Buds Ailesi
+        // 3. Samsung Galaxy Buds Family
         if (IsSamsungBuds(combined))
         {
             return _osBuildNumber >= 19044 ? "AAC" : "SBC";
         }
 
-        // 4. Bose Kulaklıklar (QC35, QC45, NC700 vb. AAC destekler)
+        // 4. Bose Headphones (QC35, QC45, NC700 etc. support AAC)
         if (IsBoseAudio(combined))
         {
             return _osBuildNumber >= 19044 ? "AAC" : "SBC";
         }
 
-        // 5. Sennheiser / B&W / aptX Yüksek Kalite Cihazlar
+        // 5. Sennheiser / B&W / High-Resolution aptX devices
         if (IsAptxCapableDevice(device))
         {
             if (combined.Contains("HD", StringComparison.OrdinalIgnoreCase) ||
@@ -318,8 +318,8 @@ public class BluetoothAudioCodecDetector : IBluetoothAudioCodecDetector
             return "aptX";
         }
 
-        // 6. Modern Windows Genel Fallback:
-        // Windows 10 21H2 ve Windows 11 (Build >= 19044) standart olarak modern A2DP kulaklıklarda AAC'yi varsayılan yapar.
+        // 6. Modern Windows Global Fallback:
+        // Windows 10 21H2 and Windows 11 (Build >= 19044) enable AAC by default for modern A2DP headphones.
         return _osBuildNumber >= 19044 ? "AAC" : "SBC";
     }
 

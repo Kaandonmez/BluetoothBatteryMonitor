@@ -279,7 +279,7 @@ public static class LocalizationService
 
         CurrentLanguage = code;
 
-        // Thread kültürlerini senkronize et
+        // Synchronize thread cultures
         try
         {
             var culture = new CultureInfo(code == "tr" ? "tr-TR" : "en-US");
@@ -288,7 +288,7 @@ public static class LocalizationService
         }
         catch { }
 
-        // WPF DynamicResource sözlüğünü güncelle
+        // Update WPF DynamicResource application dictionary
         var app = Application.Current;
         if (app != null)
         {

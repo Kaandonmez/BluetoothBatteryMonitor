@@ -10,8 +10,8 @@ using BluetoothBatteryMonitor.Models;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Tüm pil sağlayıcılarını (BLE GATT, Windows PnP, Apple AirPods Beacon, Logitech HID++)
-/// tek bir çatı altında toplayan, verileri tekilleştiren ve akıllı bildirim servisini besleyen ana motor.
+/// Main engine that aggregates all battery providers (BLE GATT, Windows PnP, Apple AirPods Beacon, Logitech HID++),
+/// deduplicates data, and powers the smart notification service.
 /// </summary>
 public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisposable
 {
@@ -70,7 +70,7 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
 
         try
         {
-            // Tüm sağlayıcıları paralel başlat
+            // Start all providers in parallel
             await Task.WhenAll(
                 _pnpProvider.StartAsync(),
                 _bleProvider.StartAsync(),
@@ -78,7 +78,7 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
                 _logitechProvider.StartAsync()
             );
 
-            // Arka planda ultra düşük kaynak tüketimli periyodik hafif kontrol döngüsü (60 saniye)
+            // Ultra-low resource periodic lightweight refresh loop in the background (60 seconds)
             _periodicCts = new CancellationTokenSource();
             _ = RunPeriodicRefreshLoopAsync(_periodicCts.Token);
 
@@ -128,7 +128,7 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
     {
         if (updated == null) return;
 
-        // Mevcut cihazlar arasında eşleşen var mı kontrol et (MAC, Id veya İsim)
+        // Check if there is a match among existing devices (MAC, Id, or Name)
         BluetoothDeviceModel? target = null;
 
         foreach (var existing in _devices.Values)
@@ -153,7 +153,7 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
             _devices[target.Id] = target;
         }
 
-        // Bilgileri birleştir (Merge)
+        // Merge device information
         target.IsConnected = updated.IsConnected;
         target.LastSeen = updated.LastSeen;
 
@@ -170,7 +170,7 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
             }
         }
 
-        // Pil verilerini güncelle (AirPods gibi zengin veriyi koru veya güncelle)
+        // Update battery data (preserve or update rich data like AirPods)
         if (updated.Battery.HasMultipleBatteries)
         {
             target.Battery.HasMultipleBatteries = true;
@@ -193,10 +193,10 @@ public class BluetoothBatteryAggregatorService : IBluetoothBatteryService, IDisp
 
         target.ProviderSource = updated.ProviderSource;
 
-        // Kritik pil denetimi ve Toast uyarısı
+        // Critical battery check and Toast notification
         _toastService.CheckAndNotify(target);
 
-        // Dinleyicilere duyur
+        // Notify subscribers
         DeviceUpdated?.Invoke(this, target);
     }
 

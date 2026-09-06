@@ -176,7 +176,7 @@ public class AppProvidersLiveTests
         var snapshot = await MonitorApp::BluetoothBatteryMonitor.App.Services.Bluetooth.BluetoothConnectionChecker.CaptureSnapshotAsync();
         Assert.NotNull(snapshot);
 
-        // Mifa_A20 bilinen kapalı cihazdır
+        // Mifa_A20 is a known powered-off device
         ulong mifaMac = 0xF44EFD69FA6F;
         if (snapshot.KnownPairedMacs.Contains(mifaMac) || snapshot.ClassicConnectedByMac.ContainsKey(mifaMac))
         {
@@ -184,7 +184,7 @@ public class AppProvidersLiveTests
             Assert.False(mifaStatus, "Kapalı olan Mifa_A20 bağlı görünmemelidir.");
         }
 
-        // Xbox Wireless Controller bilinen kapalı cihazdır
+        // Xbox Wireless Controller is a known powered-off device
         ulong xboxMac = 0xC83F26A3CE5F;
         if (snapshot.KnownPairedMacs.Contains(xboxMac) || snapshot.AepConnectedByMac.ContainsKey(xboxMac))
         {

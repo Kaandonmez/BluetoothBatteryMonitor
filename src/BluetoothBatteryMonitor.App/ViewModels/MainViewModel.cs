@@ -14,6 +14,8 @@ using BluetoothBatteryMonitor.App.Services.Bluetooth;
 using BluetoothBatteryMonitor.App.Views;
 using BluetoothBatteryMonitor.App.Services.Audio;
 
+using BluetoothBatteryMonitor.App.Services.Localization;
+
 namespace BluetoothBatteryMonitor.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
@@ -33,6 +35,7 @@ public partial class MainViewModel : ObservableObject
 
         _engine.DevicesUpdated += OnEngineDevicesUpdated;
         _engine.StatusChanged += OnEngineStatusChanged;
+        LocalizationService.LanguageChanged += (_, _) => UpdateStatusMessage();
     }
 
     public ObservableCollection<DeviceItemViewModel> Devices { get; }
@@ -41,7 +44,7 @@ public partial class MainViewModel : ObservableObject
     private bool _isBusy;
 
     [ObservableProperty]
-    private string _statusText = "Hazır";
+    private string _statusText = LocalizationService.GetString("Flyout_Status_UpToDate");
 
     [ObservableProperty]
     private int? _lowestBatteryLevel;
@@ -67,7 +70,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (IsBusy) return;
         IsBusy = true;
-        StatusText = "Cihazlar taranıyor...";
+        StatusText = LocalizationService.GetString("Flyout_Status_Scanning");
 
         try
         {
@@ -91,7 +94,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch
         {
-            // Shell başlatma hatası
+            // Ignore shell launch error
         }
     }
 
@@ -129,7 +132,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch
         {
-            // Dialog hatası
+            // Ignore dialog show error
         }
     }
 
@@ -177,14 +180,14 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 MessageBox.Show(
-                    "Bluetooth Pil Monitörü\nSürüm 1.0.0\n\nWindows 10 ve 11 için Bluetooth cihazları (kulaklık, fare, klavye vb.) pil ve ses yönetim aracı.",
-                    "Bluetooth Pil Monitörü - Hakkında",
+                    "Bluetooth Battery Monitor\nVersion 1.0.1\n\nBluetooth battery telemetry and audio management tool for Windows 10 & 11.",
+                    "Bluetooth Battery Monitor - About",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch
             {
-                // Bilgi penceresi hatası
+                // Ignore message box error
             }
         }
     }
@@ -199,11 +202,11 @@ public partial class MainViewModel : ObservableObject
     {
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
-            // UI koleksiyonunu güncelle
+            // Update UI collection
             var existingIds = Devices.Select(d => d.Id).ToHashSet();
             var incomingIds = deviceModels.Select(d => d.Id).ToHashSet();
 
-            // Silinenleri çıkar
+            // Remove disconnected/removed devices
             for (int i = Devices.Count - 1; i >= 0; i--)
             {
                 if (!incomingIds.Contains(Devices[i].Id))
@@ -212,7 +215,7 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            // Eklenen, güncellenen ve sıralananlar (Bağlı olanlar üstte kalır)
+            // Add, update, and order items (connected devices stay on top)
             for (int targetIndex = 0; targetIndex < deviceModels.Count; targetIndex++)
             {
                 var model = deviceModels[targetIndex];
@@ -242,16 +245,21 @@ public partial class MainViewModel : ObservableObject
 
             HasDevices = Devices.Count > 0;
 
-            // En düşük pil seviyesini hesapla (Sistem tepsisi için)
+            // Calculate lowest battery level (for system tray icon)
             CalculateLowestBattery();
 
-            int connectedCount = Devices.Count(d => d.IsConnected);
-            StatusText = HasDevices
-                ? (connectedCount > 0
-                    ? $"{connectedCount} cihaz bağlı ({Devices.Count} kayıtlı)"
-                    : $"{Devices.Count} cihaz kayıtlı (bağlı değil)")
-                : "Bağlı cihaz bulunamadı.";
+            UpdateStatusMessage();
         });
+    }
+
+    private void UpdateStatusMessage()
+    {
+        int connectedCount = Devices.Count(d => d.IsConnected);
+        StatusText = HasDevices
+            ? (connectedCount > 0
+                ? string.Format(LocalizationService.GetString("Flyout_Status_DevicesFound"), connectedCount)
+                : LocalizationService.GetString("Flyout_NoDevicesTitle"))
+            : LocalizationService.GetString("Flyout_NoDevicesTitle");
     }
 
     private void CalculateLowestBattery()

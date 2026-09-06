@@ -13,6 +13,12 @@ public partial class SettingsWindow : FluentWindow
     public SettingsWindow(IEnumerable<BluetoothDeviceModel>? knownDevices = null)
     {
         InitializeComponent();
+        try
+        {
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/BluetoothBatteryMonitor.App;component/Assets/app.ico", UriKind.Absolute));
+        }
+        catch { }
         _viewModel = new SettingsViewModel(knownDevices);
         DataContext = _viewModel;
     }

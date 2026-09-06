@@ -10,10 +10,10 @@ public class GoogleFastPairTests
     [Fact]
     public void TryParseFastPairAdvertisement_3ByteTws_ParsesLeftRightCaseAndCharging()
     {
-        // 3-baytlık standart Fast Pair TWS paketi:
-        // Byte 0: Sol (%80, şarjda değil -> 0x50 = 80)
-        // Byte 1: Sağ (%85, şarjda -> bit 7 (0x80) | 85 (0x55) = 0xD5)
-        // Byte 2: Kutu (%100, şarjda -> bit 7 (0x80) | 100 (0x64) = 0xE4)
+        // Standard 3-byte Fast Pair TWS packet:
+        // Byte 0: Left (80%, not charging -> 0x50 = 80)
+        // Byte 1: Right (85%, charging -> bit 7 (0x80) | 85 (0x55) = 0xD5)
+        // Byte 2: Case (100%, charging -> bit 7 (0x80) | 100 (0x64) = 0xE4)
         byte[] payload = [0x50, 0xD5, 0xE4];
 
         bool success = AppFastPair.TryParseFastPairAdvertisement(payload, out var info);
@@ -32,8 +32,8 @@ public class GoogleFastPairTests
     [Fact]
     public void TryParseFastPairAdvertisement_4ByteTwsWithHeader_ParsesCorrectly()
     {
-        // 4-baytlık Fast Pair paketi (Başlık baytı örn: 0x03)
-        byte[] payload = [0x03, 0x46, 0x4B, 0x5A]; // Sol 70, Sağ 75, Kutu 90
+        // 4-byte Fast Pair packet (Header byte e.g.: 0x03)
+        byte[] payload = [0x03, 0x46, 0x4B, 0x5A]; // Left 70, Right 75, Case 90
 
         bool success = AppFastPair.TryParseFastPairAdvertisement(payload, out var info);
 
@@ -51,7 +51,7 @@ public class GoogleFastPairTests
     [Fact]
     public void TryParseFastPairAdvertisement_SingleComponent_ParsesSingleBattery()
     {
-        // 1-baytlık tekli Fast Pair kulaklık (Bit 7 = 1 şarjda, Seviye = 95 -> 0x80 | 95 = 0xDF)
+        // 1-byte single Fast Pair headphone (Bit 7 = 1 charging, Level = 95 -> 0x80 | 95 = 0xDF)
         byte[] payload = [0xDF];
 
         bool success = AppFastPair.TryParseFastPairAdvertisement(payload, out var info);
@@ -66,8 +66,8 @@ public class GoogleFastPairTests
     [Fact]
     public void TryParseFastPairAdvertisement_Disconnected0x7F_MapsToNull()
     {
-        // Kutu kapağı kapalı veya sağ kulaklık kulağa takılmamış (0x7F = 127)
-        byte[] payload = [0x50, 0x7F, 0x64]; // Sol %80, Sağ yok (0x7F), Kutu %100
+        // Case lid closed or right earbud not inserted in ear (0x7F = 127)
+        byte[] payload = [0x50, 0x7F, 0x64]; // Left 80%, Right absent (0x7F), Case 100%
 
         bool success = AppFastPair.TryParseFastPairAdvertisement(payload, out var info);
 
@@ -81,7 +81,7 @@ public class GoogleFastPairTests
     [Fact]
     public void TryParseFastPairAdvertisement_AllUnavailable_ReturnsFalse()
     {
-        byte[] payload = [0x7F, 0x7F, 0x7F]; // Hiçbir bileşen mevcut değil
+        byte[] payload = [0x7F, 0x7F, 0x7F]; // None of the components are present
 
         bool success = AppFastPair.TryParseFastPairAdvertisement(payload, out var info);
 

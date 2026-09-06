@@ -11,7 +11,7 @@ using Windows.Devices.Bluetooth.Advertisement;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Çözümlenen AirPods / Beats beacon verileri.
+/// Parsed AirPods / Beats beacon data.
 /// </summary>
 public record AirPodsBatteryData(
     ushort ModelId,
@@ -24,9 +24,9 @@ public record AirPodsBatteryData(
     bool IsCaseCharging);
 
 /// <summary>
-/// BluetoothLEAdvertisementWatcher ile Apple üretici verilerini (0x004C) arka planda
-/// koklayarak AirPods, AirPods Pro, AirPods Max ve Beats cihazlarının Sol, Sağ ve Şarj Kutusu
-/// pil yüzdelerini ve şarj durumlarını gerçek zamanlı ayrıştıran servis.
+/// Service that sniffs Apple manufacturer data (0x004C) in the background via BluetoothLEAdvertisementWatcher
+/// and parses Left, Right, and Charging Case battery percentages and charging states in real-time
+/// for AirPods, AirPods Pro, AirPods Max, and Beats devices.
 /// </summary>
 public class AppleAirPodsBeaconProvider
 {
@@ -51,7 +51,7 @@ public class AppleAirPodsBeaconProvider
                     ScanningMode = BluetoothLEScanningMode.Active
                 };
 
-                // Apple Company ID filtresi ekle (böylece ilgisiz paketler işlemciyi yormaz)
+                // Add Apple Company ID filter (prevents unrelated packets from consuming CPU)
                 var manufacturerFilter = new BluetoothLEManufacturerData
                 {
                     CompanyId = AppleCompanyId
@@ -74,7 +74,7 @@ public class AppleAirPodsBeaconProvider
 
     public Task RefreshAsync()
     {
-        // BLE Advertisement Watcher arka planda sürekli dinlemede kalır
+        // BLE Advertisement Watcher continuously listens in the background
         return Task.CompletedTask;
     }
 
@@ -131,7 +131,7 @@ public class AppleAirPodsBeaconProvider
                 model.IsConnected = false;
                 model.LastSeen = DateTime.Now;
 
-                // Pil bilgilerini aktar
+                // Transfer battery information
                 if (isOverEar)
                 {
                     model.Battery.HasMultipleBatteries = false;
@@ -158,8 +158,8 @@ public class AppleAirPodsBeaconProvider
     }
 
     /// <summary>
-    /// Apple BLE üretici verisi bayt dizisini çözümler.
-    /// Tip 0x07 (Proximity Pairing) ve 0x10 paketlerini destekler.
+    /// Decodes Apple BLE manufacturer data byte array.
+    /// Supports Type 0x07 (Proximity Pairing) and 0x10 packets.
     /// </summary>
     public static bool TryParseAirPodsAdvertisement(byte[] data, out AirPodsBatteryData? result)
     {
@@ -171,24 +171,24 @@ public class AppleAirPodsBeaconProvider
 
         byte packetType = data[0];
 
-        // Tip 0x07: Apple Proximity Pairing (AirPods durum yayını)
+        // Type 0x07: Apple Proximity Pairing (AirPods status broadcast)
         if (packetType == 0x07 && data.Length >= 9)
         {
             ushort modelId = (ushort)((data[2] << 8) | data[3]);
             string modelName = GetModelName(modelId);
 
-            // data[6]: Pil nibble'ları (Üst: Sol/Sağ, Alt: Sağ/Sol)
+            // data[6]: Battery nibbles (Upper: Left/Right, Lower: Right/Left)
             int nibble1 = (data[6] >> 4) & 0x0F;
             int nibble2 = data[6] & 0x0F;
 
-            // data[7]: Üst nibble = Şarj durum bitleri, Alt nibble = Kutu pili
+            // data[7]: Upper nibble = Charging state bits, Lower nibble = Case battery
             int chargingBits = (data[7] >> 4) & 0x0F;
             int caseNibble = data[7] & 0x0F;
 
-            // data[5] veya data[8] baytındaki flip (ters çevirme) biti
+            // Flip bit in data[5] or data[8] byte
             bool isFlipped = data.Length > 8 && ((data[8] & 0x20) != 0 || (data[5] & 0x02) != 0);
 
-            // 0-10 arası değerler %0-%100 (x10) temsil eder. 15 (0x0F) bağlantısız / kulakta değil demektir.
+            // Values between 0-10 represent 0%-100% (x10). 15 (0x0F) indicates disconnected / not in ear.
             int? podA = ConvertNibbleToPercent(nibble1);
             int? podB = ConvertNibbleToPercent(nibble2);
             int? caseBattery = ConvertNibbleToPercent(caseNibble);
@@ -217,10 +217,10 @@ public class AppleAirPodsBeaconProvider
             return true;
         }
 
-        // Tip 0x10: Nearby Action/Info paketi
+        // Type 0x10: Nearby Action/Info packet
         if (packetType == 0x10 && data.Length >= 5)
         {
-            // Genel durum bildirimi
+            // General status broadcast
             result = new AirPodsBatteryData(
                 ModelId: 0,
                 ModelName: "Apple Cihazı",
@@ -243,7 +243,7 @@ public class AppleAirPodsBeaconProvider
         {
             return nibble * 10;
         }
-        return null; // 15 veya geçersizse devre dışı
+        return null; // Inactive if 15 or invalid
     }
 
     public static string GetModelName(ushort modelId) => modelId switch

@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="..\..\src\BluetoothBatteryMonitor.App\Assets\app.ico" Link="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\BluetoothBatteryMonitor\BluetoothBatteryMonitor.csproj" />
     <ProjectReference Include="..\..\src\BluetoothBatteryMonitor.App\BluetoothBatteryMonitor.App.csproj" Aliases="MonitorApp" />
   </ItemGroup>

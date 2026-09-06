@@ -71,7 +71,7 @@ public class QuickVolumeControlTests
 
         var vm = new AppDeviceItemViewModel(speaker, mockAudio);
 
-        // Kullanıcı sesi %80 yaptı
+        // User set volume to 80%
         vm.VolumePercent = 80;
 
         Assert.True(mockAudio.Volumes.ContainsKey("EP_JBL"));
@@ -96,13 +96,13 @@ public class QuickVolumeControlTests
 
         Assert.False(vm.IsMuted);
 
-        // Sessize al
+        // Mute
         vm.ToggleMuteCommand.Execute(null);
 
         Assert.True(vm.IsMuted);
         Assert.True(mockAudio.Mutes["EP_BUDS"]);
 
-        // Sesi tekrar aç
+        // Unmute
         vm.ToggleMuteCommand.Execute(null);
 
         Assert.False(vm.IsMuted);

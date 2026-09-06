@@ -15,15 +15,15 @@ public enum TaskbarEdge
 }
 
 /// <summary>
-/// Görev çubuğunun (Taskbar) ve sistem tepsisinin (Notification Area) ekran konumunu
-/// tespit ederek Flyout penceresini tam görev çubuğuna yapışık ve modern şekilde konumlandırır.
+/// Detects the screen position of the taskbar and system tray (Notification Area)
+/// to position the Flyout window docked and aligned with the taskbar in a modern fashion.
 /// </summary>
 public static class TaskbarPositionHelper
 {
-    private const int FlyoutMargin = 12; // Görev çubuğundan uzaklık boşluğu
+    private const int FlyoutMargin = 12; // Distance margin from taskbar
 
     /// <summary>
-    /// Ekrandaki görev çubuğunun yönünü tespit eder (Alt, Üst, Sol, Sağ).
+    /// Detects the edge orientation of the taskbar on screen (Bottom, Top, Left, Right).
     /// </summary>
     public static TaskbarEdge GetTaskbarEdge()
     {
@@ -44,12 +44,12 @@ public static class TaskbarPositionHelper
             return TaskbarEdge.Right;
         }
 
-        // Varsayılan Windows 11 ve 10 konumu
+        // Default Windows 11 and 10 position
         return TaskbarEdge.Bottom;
     }
 
     /// <summary>
-    /// Verilen Flyout pencere genişlik ve yüksekliğine göre en uygun ekran koordinatını (X, Y) hesaplar.
+    /// Calculates the optimal screen coordinate (X, Y) based on given Flyout window width and height.
     /// </summary>
     public static Point CalculateFlyoutPosition(double windowWidth, double windowHeight)
     {
@@ -78,13 +78,13 @@ public static class TaskbarPositionHelper
 
             case TaskbarEdge.Bottom:
             default:
-                // Sağ alt köşe (Bildirim alanı üzeri)
+                // Bottom-right corner (above notification area)
                 x = workArea.Right - windowWidth - FlyoutMargin;
                 y = workArea.Bottom - windowHeight - FlyoutMargin;
                 break;
         }
 
-        // Ekran dışına taşmayı önleyici güvenlik kontrolleri
+        // Safety bounds check to prevent overflowing outside the screen
         x = Math.Max(workArea.Left, Math.Min(x, workArea.Right - windowWidth));
         y = Math.Max(workArea.Top, Math.Min(y, workArea.Bottom - windowHeight));
 

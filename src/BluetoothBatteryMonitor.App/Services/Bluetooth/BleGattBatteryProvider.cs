@@ -29,7 +29,7 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // Eşleşmiş BLE cihazlarını tara
+            // Scan paired BLE devices
             string selector = BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
             var deviceInfos = await DeviceInformation.FindAllAsync(selector).AsTask(cancellationToken);
 
@@ -42,14 +42,14 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
                     using var bleDevice = await BluetoothLEDevice.FromIdAsync(info.Id).AsTask(cancellationToken);
                     if (bleDevice == null) continue;
 
-                    // Batarya servisini sorgula (0x180F)
+                    // Query Battery Service (0x180F)
                     var servicesResult = await bleDevice.GetGattServicesForUuidAsync(
                         GattServiceUuids.Battery,
                         BluetoothCacheMode.Uncached).AsTask(cancellationToken);
 
                     if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
                     {
-                        // Cache'den tekrar dene
+                        // Retry from cache
                         servicesResult = await bleDevice.GetGattServicesForUuidAsync(
                             GattServiceUuids.Battery,
                             BluetoothCacheMode.Cached).AsTask(cancellationToken);
@@ -88,7 +88,7 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
 
                                         resultList.Add(model);
 
-                                        // Eğer izleme açıksa bildirim aboneliğini kur
+                                        // Subscribe to characteristic notifications if monitoring is active
                                         if (_isMonitoring)
                                         {
                                             _ = SubscribeToBatteryNotificationAsync(info.Id, batteryChar, model);
@@ -103,13 +103,13 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
                 }
                 catch
                 {
-                    // Belirli bir cihazla iletişim kurulamazsa diğerlerine devam et
+                    // Continue to next device if communication fails
                 }
             }
         }
         catch
         {
-            // Genel tarama hatası
+            // General scan error
         }
 
         return resultList;
@@ -165,7 +165,7 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Abonelik desteklenmiyor olabilir
+            // Subscription may not be supported
         }
     }
 
@@ -181,12 +181,12 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
                 var model = new BluetoothDeviceModel
                 {
                     Id = device.DeviceId,
-                    Name = !string.IsNullOrWhiteSpace(device.Name) ? device.Name : "BLE Cihaz",
+                    Name = !string.IsNullOrWhiteSpace(device.Name) ? device.Name : "BLE Device",
                     BatteryLevel = level,
                     IsConnected = device.ConnectionStatus == BluetoothConnectionStatus.Connected,
                     DeviceType = DetectDeviceType(device.Name),
                     BluetoothAddress = device.BluetoothAddress != 0 ? device.BluetoothAddress : BluetoothDeviceModel.ExtractMacAddress(device.DeviceId),
-                    ProviderSource = "BLE GATT (Canlı)",
+                    ProviderSource = "BLE GATT (Live)",
                     LastUpdated = DateTime.Now
                 };
 
@@ -195,7 +195,7 @@ public class BleGattBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Olay işleme hatası
+            // Event processing error
         }
     }
 

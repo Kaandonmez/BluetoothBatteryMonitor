@@ -62,7 +62,7 @@ public class LocalRestApiServer : IDisposable
                 }
                 catch
                 {
-                    // Localhost eklenemezse devam et
+                    // Continue if localhost prefix cannot be added
                 }
 
                 try
@@ -71,7 +71,7 @@ public class LocalRestApiServer : IDisposable
                 }
                 catch (HttpListenerException) when (_listener.Prefixes.Count > 1)
                 {
-                    // Eğer localhost yüzünden Start() başarısız olduysa, sadece 127.0.0.1 ile devam et
+                    // If Start() fails due to localhost prefix, fallback to 127.0.0.1 only
                     _listener.Prefixes.Clear();
                     _listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
                     _listener.Start();
@@ -87,10 +87,10 @@ public class LocalRestApiServer : IDisposable
             }
             catch (Exception ex)
             {
-                // Port meşgulse, yetki yoksa veya HttpListener desteklenmiyorsa uygulamanın çökmesini engelle
+                // Prevent crash if port is occupied, access denied, or HttpListener unsupported
                 IsRunning = false;
                 LastError = ex.Message;
-                Debug.WriteLine($"[LocalRestApiServer] Başlatılamadı (Port: {Port}): {ex.Message}");
+                Debug.WriteLine($"[LocalRestApiServer] Failed to start (Port: {Port}): {ex.Message}");
                 try
                 {
                     _listener?.Close();
@@ -131,7 +131,7 @@ public class LocalRestApiServer : IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[LocalRestApiServer] Dinleme hatası: {ex.Message}");
+                Debug.WriteLine($"[LocalRestApiServer] Listener loop error: {ex.Message}");
             }
         }
     }
@@ -143,7 +143,7 @@ public class LocalRestApiServer : IDisposable
             var req = context.Request;
             var res = context.Response;
 
-            // CORS başlıkları
+            // CORS headers
             res.Headers.Add("Access-Control-Allow-Origin", "*");
             res.Headers.Add("Access-Control-Allow-Methods", "GET, OPTIONS");
             res.Headers.Add("Access-Control-Allow-Headers", "Content-Type");

@@ -54,7 +54,7 @@ public class ToastNotificationServiceTests
         Assert.Single(service.SentNotifications);
         Assert.Equal("Xbox Controller", service.SentNotifications[0].Name);
         Assert.Equal(18, service.SentNotifications[0].Level);
-        Assert.False(service.SentNotifications[0].IsCritical); // Kademe 1: Uyarı
+        Assert.False(service.SentNotifications[0].IsCritical); // Tier 1: Warning
     }
 
     [Fact]
@@ -72,10 +72,10 @@ public class ToastNotificationServiceTests
         service.CheckAndNotify(device);
         Assert.Single(service.SentNotifications);
 
-        // Hemen ardından aynı seviyede tekrar kontrol edildiğinde cooldown nedeniyle yutulmalı
+        // Immediately checking again at the same level should be suppressed due to cooldown
         bool secondCheck = service.CheckAndNotify(device);
         Assert.False(secondCheck);
-        Assert.Single(service.SentNotifications); // Sayı artmamalı
+        Assert.Single(service.SentNotifications); // Count should not increase
     }
 
     [Fact]
@@ -90,18 +90,18 @@ public class ToastNotificationServiceTests
             Battery = new BatteryInfo { Level = 18 }
         };
 
-        // 1. Kademe (%18)
+        // Tier 1 (18%)
         service.CheckAndNotify(device);
         Assert.Single(service.SentNotifications);
 
-        // 2. Acil Kademe (%8): Cooldown henüz dolmamış olsa dahi acil durum uyarısı verilmeli!
+        // Tier 2 Emergency (8%): Emergency warning must be sent even if cooldown has not elapsed!
         device.Battery.Level = 8;
         bool secondCheck = service.CheckAndNotify(device);
 
         Assert.True(secondCheck);
         Assert.Equal(2, service.SentNotifications.Count);
         Assert.Equal(8, service.SentNotifications[1].Level);
-        Assert.True(service.SentNotifications[1].IsCritical); // Kademe 2: Kritik Acil
+        Assert.True(service.SentNotifications[1].IsCritical); // Tier 2: Critical Emergency
     }
 
     [Fact]

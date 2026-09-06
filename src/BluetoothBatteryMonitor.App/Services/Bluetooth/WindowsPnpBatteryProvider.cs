@@ -86,7 +86,7 @@ public class WindowsPnpBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // PnP sorgu hatası
+            // PnP query error
         }
 
         return list;
@@ -123,7 +123,7 @@ public class WindowsPnpBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Watcher başlatılamazsa periyodik sorgu ile idare edilir
+            // If watcher fails to initialize, fallback to periodic queries
         }
     }
 
@@ -193,7 +193,7 @@ public class WindowsPnpBatteryProvider : IBluetoothBatteryProvider
                     BatteryLevel = level,
                     LastUpdated = DateTime.Now,
                     BluetoothAddress = BluetoothDeviceModel.ExtractMacAddress(infoUpdate.Id),
-                    ProviderSource = "Windows PnP (Canlı)"
+                    ProviderSource = "Windows PnP (Live)"
                 };
 
                 model.IsConnected = await BluetoothConnectionChecker.IsDeviceConnectedAsync(model);
@@ -204,7 +204,7 @@ public class WindowsPnpBatteryProvider : IBluetoothBatteryProvider
 
     private static string CleanDeviceName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return "Bluetooth Aygıtı";
+        if (string.IsNullOrWhiteSpace(name)) return "Bluetooth Device";
         string cleaned = name.Replace(" Hands-Free AG", "", StringComparison.OrdinalIgnoreCase)
                              .Replace(" Hands-Free HF Audio", "", StringComparison.OrdinalIgnoreCase)
                              .Replace(" Hands-Free", "", StringComparison.OrdinalIgnoreCase)

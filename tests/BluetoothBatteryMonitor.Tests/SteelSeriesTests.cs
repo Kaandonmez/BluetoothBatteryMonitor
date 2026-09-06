@@ -13,8 +13,8 @@ public class SteelSeriesTests
         byte[] report = new byte[8];
         report[0] = 0xB0; // Report ID
         report[1] = 0x00;
-        report[2] = 85;   // Pil seviyesi: %85
-        report[3] = 0x01; // Şarj ediliyor: 1
+        report[2] = 85;   // Battery level: 85%
+        report[3] = 0x01; // Charging: 1
 
         bool success = AppSS.TryParseSteelSeriesReport(report, out int? level, out bool isCharging);
 
@@ -29,8 +29,8 @@ public class SteelSeriesTests
         byte[] report = new byte[8];
         report[0] = 0xB0;
         report[1] = 0x00;
-        report[2] = 3;    // 3 çubuk -> %75
-        report[3] = 0x00; // Deşarjda
+        report[2] = 3;    // 3 bars -> 75%
+        report[3] = 0x00; // Discharging
 
         bool success = AppSS.TryParseSteelSeriesReport(report, out int? level, out bool isCharging);
 
@@ -45,8 +45,8 @@ public class SteelSeriesTests
         byte[] report = new byte[8];
         report[0] = 0x00; // Report ID 0x00
         report[1] = 0x00;
-        report[2] = 92;   // %92
-        report[3] = 0x01; // Şarjda
+        report[2] = 92;   // 92%
+        report[3] = 0x01; // Charging
 
         bool success = AppSS.TryParseSteelSeriesReport(report, out int? level, out bool isCharging);
 

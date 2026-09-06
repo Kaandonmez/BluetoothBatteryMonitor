@@ -7,7 +7,7 @@ namespace BluetoothBatteryMonitor.App.Services.Notification;
 
 public class ToastNotificationService
 {
-    // CihazId_Esik => Son bildirim gönderilme zamanı
+    // DeviceId_Threshold => Last notification dispatch timestamp
     private readonly ConcurrentDictionary<string, DateTime> _lastNotificationTimes = new();
     private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(30);
 
@@ -21,11 +21,11 @@ public class ToastNotificationService
 
         int level = levelVal.Value;
 
-        // Cihaza özel eşik tanımlıysa onu kullan, değilse global eşiği kullan
+        // Use device-specific threshold if set; otherwise fallback to global threshold
         int lowThreshold = settings.GetEffectiveLowBatteryThreshold(device.Id, device.BluetoothAddress);
         
-        // Eğer cihazın düşük pil eşiği global kritik eşikten küçük veya eşitse (örn. fare için %10),
-        // kritik eşik düşük eşikten daha küçük tutulmalı (örn. %5) ki %10'da önce düşük pil uyarısı gitsin.
+        // If device's low battery threshold is less than or equal to global critical threshold (e.g. 10% for a mouse),
+        // scale down the critical threshold proportionally so warning triggers prior to shutdown.
         int criticalThreshold = Math.Min(settings.CriticalBatteryThreshold, Math.Max(1, lowThreshold / 2));
 
         if (level <= criticalThreshold)
@@ -47,7 +47,7 @@ public class ToastNotificationService
         {
             if (now - lastTime < _cooldown)
             {
-                // Cooldown henüz dolmadı
+                // Cooldown period has not elapsed yet
                 return false;
             }
         }
@@ -61,25 +61,25 @@ public class ToastNotificationService
         int? displayLevel = device.EffectiveBatteryLevel ?? device.BatteryLevel;
 
         string title = isCritical
-            ? $"⚠️ Kritik Pil: {device.Name}"
-            : $"🔋 Düşük Pil: {device.Name}";
+            ? string.Format(Localization.LocalizationService.GetString("Toast_CriticalTitle"), device.Name)
+            : string.Format(Localization.LocalizationService.GetString("Toast_LowTitle"), device.Name);
 
         string message = isCritical
-            ? $"{device.Name} pili kritik seviyede (%{displayLevel}). Lütfen hemen şarj edin!"
-            : $"{device.Name} pili azaldı (%{displayLevel}). Yakında şarja takmanız gerekebilir.";
+            ? string.Format(Localization.LocalizationService.GetString("Toast_CriticalBody"), device.Name, displayLevel)
+            : string.Format(Localization.LocalizationService.GetString("Toast_LowBody"), device.Name, displayLevel);
 
         try
         {
             new ToastContentBuilder()
                 .AddText(title)
                 .AddText(message)
-                .AddAttributionText("Bluetooth Pil Monitörü")
+                .AddAttributionText(Localization.LocalizationService.GetString("App_Title"))
                 .Show();
             return true;
         }
         catch
         {
-            // Bildirim izinleri kapalıysa veya bildirim servisi kullanılamıyorsa
+            // Suppress error if notification permissions are denied or shell service is unavailable
             return false;
         }
     }

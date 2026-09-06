@@ -286,7 +286,7 @@ public static class ScreenshotCaptureService
         {
             if (fillDarkBackground)
             {
-                // Windows 11 yumuşak pencere gölgesi çizimi (multi-pass shadow)
+                // Windows 11 soft window shadow rendering (multi-pass shadow)
                 for (int i = 10; i >= 1; i--)
                 {
                     var shadowRect = new Rect(margin - i, margin - i + 3, width + (i * 2), height + (i * 2));
@@ -295,7 +295,7 @@ public static class ScreenshotCaptureService
                     dc.DrawRoundedRectangle(shadowBrush, null, shadowRect, 10 + i, 10 + i);
                 }
 
-                // Pencere arka planı ve 1px zarif Fluent kenarlık
+                // Window background and 1px elegant Fluent border
                 var darkBrush = new SolidColorBrush(Color.FromRgb(32, 32, 36));
                 var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)), 1.0);
                 dc.DrawRoundedRectangle(darkBrush, borderPen, new Rect(margin, margin, width, height), 10, 10);

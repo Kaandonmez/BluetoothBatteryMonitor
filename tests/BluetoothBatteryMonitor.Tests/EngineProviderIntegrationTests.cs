@@ -44,7 +44,7 @@ public class EngineProviderIntegrationTests
         var toast = new AppToast();
         using var engine = new AppEngine(toast);
 
-        // Canlı ortamda tüm 9 sağlayıcı paralel çalışırken hiçbir istisna fırlatmamalıdır
+        // In a live environment, running all providers in parallel should not throw any exception
         var exception = await Record.ExceptionAsync(async () =>
         {
             await engine.RefreshAllDevicesAsync();

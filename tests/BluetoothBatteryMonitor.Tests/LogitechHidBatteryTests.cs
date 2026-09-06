@@ -8,14 +8,14 @@ public class LogitechHidBatteryTests
     [Fact]
     public void TryParseLogitechBatteryReport_ValidUnifiedBatteryReport_ParsesCorrectly()
     {
-        // 20 baytlık HID++ Long Report (Feature 0x1004)
+        // 20-byte HID++ Long Report (Feature 0x1004)
         byte[] report = new byte[20];
         report[0] = 0x11; // Long report ID
         report[1] = 0xFF; // Device index
         report[2] = 0x05; // Feature index
         report[3] = 0x00; // Function
-        report[4] = 78;   // %78 Pil
-        report[5] = 0x01; // Şarj oluyor (1)
+        report[4] = 78;   // 78% Battery
+        report[5] = 0x01; // Charging (1)
 
         bool success = LogitechHidBatteryProvider.TryParseLogitechBatteryReport(report, out var info);
 
@@ -53,8 +53,8 @@ public class LogitechHidBatteryTests
     {
         byte[] report = new byte[20];
         report[0] = 0x11;
-        report[4] = 42;   // %42
-        report[5] = 0x00; // Pilde / Deşarj
+        report[4] = 42;   // 42%
+        report[5] = 0x00; // On battery / Discharging
 
         bool success = LogitechHidBatteryProvider.TryParseLogitechBatteryReport(report, out var info);
 
@@ -68,7 +68,7 @@ public class LogitechHidBatteryTests
     [Fact]
     public void TryParseLogitechBatteryReport_InvalidReport_ReturnsFalse()
     {
-        byte[] invalidReport = [0x01, 0x02, 0x03]; // Çok kısa ve yanlış ID
+        byte[] invalidReport = [0x01, 0x02, 0x03]; // Too short and wrong ID
         bool success = LogitechHidBatteryProvider.TryParseLogitechBatteryReport(invalidReport, out var info);
 
         Assert.False(success);
@@ -80,8 +80,8 @@ public class LogitechHidBatteryTests
     {
         byte[] report = new byte[20];
         report[0] = 0x11;
-        report[4] = 0;    // %0 Pil (Kritik tükenmiş)
-        report[5] = 0x00; // Deşarj
+        report[4] = 0;    // 0% Battery (Critically depleted)
+        report[5] = 0x00; // Discharging
 
         bool success = LogitechHidBatteryProvider.TryParseLogitechBatteryReport(report, out var info);
 

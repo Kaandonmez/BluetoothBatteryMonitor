@@ -154,11 +154,11 @@ public class TrayMenuAndFlyoutLifecycleTests
                 flyout.HideImmediately();
                 Assert.False(flyout.IsFlyoutOpen);
 
-                // Kapalıyken toggle açmalıdır
+                // When closed, toggle should open
                 flyout.ToggleFlyout();
                 Assert.True(flyout.IsFlyoutOpen);
 
-                // Açıkken toggle kapatmalıdır
+                // When open, toggle should close
                 flyout.ToggleFlyout();
                 Assert.False(flyout.IsFlyoutOpen);
             }
@@ -188,19 +188,19 @@ public class TrayMenuAndFlyoutLifecycleTests
                 var taskbarIcon = taskbarField.GetValue(trayManager) as TaskbarIcon;
                 Assert.NotNull(taskbarIcon);
 
-                // 1. Durum: Flyout açıkken sol tıklandığında kapanmalı ve mouse-up'ta tekrar açılmamalı
+                // Case 1: When flyout is open, left-clicking should close it and not reopen on mouse-up
                 flyout.ShowFlyout();
                 Assert.True(flyout.IsFlyoutOpen);
 
-                // MouseDown tetikle
+                // Trigger MouseDown
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayLeftMouseDownEvent));
                 Assert.False(flyout.IsFlyoutOpen);
 
-                // MouseUp tetikle: Tekrar açılmamalıdır
+                // Trigger MouseUp: Should not reopen
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayLeftMouseUpEvent));
                 Assert.False(flyout.IsFlyoutOpen);
 
-                // 2. Durum: Flyout kapalıyken sol tıklandığında açılmalı
+                // Case 2: When flyout is closed, left-clicking should open it
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayLeftMouseDownEvent));
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayLeftMouseUpEvent));
                 Assert.True(flyout.IsFlyoutOpen);
@@ -232,11 +232,11 @@ public class TrayMenuAndFlyoutLifecycleTests
                 var taskbarIcon = taskbarField.GetValue(trayManager) as TaskbarIcon;
                 Assert.NotNull(taskbarIcon);
 
-                // Flyout açık
+                // Flyout open
                 flyout.ShowFlyout();
                 Assert.True(flyout.IsFlyoutOpen);
 
-                // Sağ tık geldiğinde Flyout anında kapanmalıdır
+                // When right-click occurs, Flyout should close immediately
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayRightMouseDownEvent));
                 Assert.False(flyout.IsFlyoutOpen);
             }
@@ -272,11 +272,11 @@ public class TrayMenuAndFlyoutLifecycleTests
                 var menu = menuField.GetValue(trayManager) as ContextMenu;
                 Assert.NotNull(menu);
 
-                // Menü açıkken
+                // While menu is open
                 menu.IsOpen = true;
                 flyout.HideImmediately();
 
-                // Sol tık MouseUp geldiğinde ContextMenu kapanıp Flyout açılmalıdır
+                // When left-click MouseUp occurs, ContextMenu should close and Flyout should open
                 taskbarIcon.RaiseEvent(new RoutedEventArgs(TaskbarIcon.TrayLeftMouseUpEvent));
 
                 Assert.False(menu.IsOpen);
@@ -303,7 +303,7 @@ public class TrayMenuAndFlyoutLifecycleTests
             {
                 flyout.ShowFlyout();
 
-                // Alt menü açık bayrağı
+                // Submenu open flag
                 var childMenuField = typeof(AppFlyoutWindow).GetField("_isChildContextMenuOpen", BindingFlags.NonPublic | BindingFlags.Instance);
                 Assert.NotNull(childMenuField);
                 childMenuField.SetValue(flyout, true);
@@ -312,7 +312,7 @@ public class TrayMenuAndFlyoutLifecycleTests
                 Assert.NotNull(deactMethod);
                 deactMethod.Invoke(flyout, new object?[] { null, EventArgs.Empty });
 
-                // Alt context menü açıkken deactivation pencereyi kapatmamalıdır
+                // Deactivation while child context menu is open should not close the window
                 Assert.True(flyout.IsVisible);
 
                 childMenuField.SetValue(flyout, false);
@@ -346,9 +346,9 @@ public class TrayMenuAndFlyoutLifecycleTests
                 Assert.NotNull(startupItem);
                 Assert.True(startupItem.IsCheckable);
 
-                // WPF MenuItem IsCheckable tıklandığında IsChecked değerini önce tersine çevirir, sonra Click eventini tetikler
+                // When clicked, WPF MenuItem with IsCheckable toggles IsChecked first, then raises Click event
                 bool initialChecked = startupItem.IsChecked;
-                startupItem.IsChecked = !initialChecked; // WPF click simülasyonu
+                startupItem.IsChecked = !initialChecked; // Simulate WPF click
                 startupItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
 
                 var savedSettings = AppSettings.Load();
@@ -366,7 +366,7 @@ public class TrayMenuAndFlyoutLifecycleTests
     [Fact]
     public void MainViewModel_OpenAboutWindow_DoesNotThrow()
     {
-        // Hakkında komutu güvenli çalışmalı
+        // About command should execute safely
         Assert.NotNull(typeof(AppMainViewModel).GetMethod("OpenAboutWindow", BindingFlags.Public | BindingFlags.Static));
     }
 }

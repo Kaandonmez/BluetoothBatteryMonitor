@@ -48,12 +48,12 @@ public partial class DeviceItemViewModel : ObservableObject
     private bool _isConnected = false;
 
     [ObservableProperty]
-    private string _connectionStatusText = "Bağlı Değil";
+    private string _connectionStatusText = "Not Connected";
 
     [ObservableProperty]
     private string _providerSource = string.Empty;
 
-    // TWS Alanları
+    // TWS Fields
     [ObservableProperty]
     private bool _isTws;
 
@@ -96,7 +96,7 @@ public partial class DeviceItemViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasCaseBattery;
 
-    // Ses Kontrol Alanları (Quick Volume Control)
+    // Audio Control Fields (Quick Volume Control)
     [ObservableProperty]
     private bool _hasAudioEndpoint;
 
@@ -109,7 +109,7 @@ public partial class DeviceItemViewModel : ObservableObject
     [ObservableProperty]
     private bool _isMuted;
 
-    // Ses Kodek Bilgisi (SBC, AAC, aptX, aptX HD, LDAC)
+    // Audio Codec Info (SBC, AAC, aptX, aptX HD, LDAC)
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAudioCodec))]
     [NotifyPropertyChangedFor(nameof(AudioCodecToolTip))]
@@ -127,7 +127,7 @@ public partial class DeviceItemViewModel : ObservableObject
         _ => LocalizationService.GetString("Codec_Active", AudioCodec ?? string.Empty)
     };
 
-    // Cihaza Özel Pil Bildirim Eşiği
+    // Device Specific Battery Alert Threshold
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCustomThreshold))]
     [NotifyPropertyChangedFor(nameof(EffectiveThreshold))]
@@ -243,7 +243,7 @@ public partial class DeviceItemViewModel : ObservableObject
         IsCharging = model.IsCharging;
         IconSymbol = GetSymbolForDeviceType(model.Type);
 
-        // Ses aygıtı eşleşmesi (Quick Volume Control)
+        // Audio endpoint matching (Quick Volume Control)
         bool isAudioDevice = model.Type is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker;
         if (isAudioDevice && _audioManager != null && model.IsConnected)
         {
@@ -275,7 +275,7 @@ public partial class DeviceItemViewModel : ObservableObject
             AudioEndpointId = null;
         }
 
-        // Ses Kodek Tespiti
+        // Audio Codec Detection
         if (isAudioDevice && model.IsConnected)
         {
             var ep = HasAudioEndpoint && _audioManager != null ? _audioManager.FindEndpointForBluetoothDevice(model) : null;
@@ -307,7 +307,7 @@ public partial class DeviceItemViewModel : ObservableObject
             AudioCodec = model.AudioCodec;
         }
 
-        // Cihaza Özel Pil Bildirim Eşiği
+        // Device Specific Battery Alert Threshold
         var settings = AppSettings.Load();
         GlobalThreshold = settings.LowBatteryThreshold;
         if (settings.HasCustomThreshold(model.Id, model.BluetoothAddress))
@@ -363,15 +363,15 @@ public partial class DeviceItemViewModel : ObservableObject
     private static Brush GetBrushForLevel(int level, bool isCharging)
     {
         if (isCharging)
-            return new SolidColorBrush(Color.FromRgb(0, 164, 239)); // Mavi şarj rengi
+            return new SolidColorBrush(Color.FromRgb(0, 164, 239)); // Cyan/Blue charging color
 
         if (level >= 40)
-            return new SolidColorBrush(Color.FromRgb(16, 185, 129)); // Yeşil (#10B981)
+            return new SolidColorBrush(Color.FromRgb(16, 185, 129)); // Green (#10B981)
 
         if (level >= 20)
-            return new SolidColorBrush(Color.FromRgb(245, 158, 11)); // Sarı/Turuncu (#F59E0B)
+            return new SolidColorBrush(Color.FromRgb(245, 158, 11)); // Amber/Orange (#F59E0B)
 
-        return new SolidColorBrush(Color.FromRgb(239, 68, 68)); // Kırmızı (#EF4444)
+        return new SolidColorBrush(Color.FromRgb(239, 68, 68)); // Red (#EF4444)
     }
 
     private static SymbolRegular GetSymbolForDeviceType(DeviceType type)

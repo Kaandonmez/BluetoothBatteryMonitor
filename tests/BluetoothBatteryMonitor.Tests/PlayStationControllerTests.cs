@@ -10,12 +10,12 @@ public class PlayStationControllerTests
     [Fact]
     public void TryParseDualShock4Report_Report0x11_NormalBattery_ParsesLevelAndDischarging()
     {
-        // 78-baytlık simüle edilmiş DS4 Bluetooth Extended Report (0x11)
+        // 78-byte simulated DS4 Bluetooth Extended Report (0x11)
         byte[] report = new byte[78];
         report[0] = 0x11; // Report ID
         report[1] = 0xC0;
         report[2] = 0x20;
-        // Index 30: Battery byte. 0x08 -> %80, bit 4 (0x10) kapalı -> şarjda değil
+        // Index 30: Battery byte. 0x08 -> 80%, bit 4 (0x10) off -> not charging
         report[30] = 0x08;
 
         bool success = AppPS.TryParseDualShock4Report(report, out int? level, out bool isCharging);
@@ -30,7 +30,7 @@ public class PlayStationControllerTests
     {
         byte[] report = new byte[78];
         report[0] = 0x11;
-        // 0x17 -> level 7 (%70), 0x10 biti aktif -> şarj ediliyor
+        // 0x17 -> level 7 (70%), 0x10 bit active -> charging
         report[30] = 0x17;
 
         bool success = AppPS.TryParseDualShock4Report(report, out int? level, out bool isCharging);
@@ -45,7 +45,7 @@ public class PlayStationControllerTests
     {
         byte[] report = new byte[78];
         report[0] = 0x11;
-        // 0x1B -> raw 11 (tam şarj) + charging bit (0x10)
+        // 0x1B -> raw 11 (fully charged) + charging bit (0x10)
         report[30] = 0x1B;
 
         bool success = AppPS.TryParseDualShock4Report(report, out int? level, out bool isCharging);
@@ -61,7 +61,7 @@ public class PlayStationControllerTests
         byte[] report = new byte[64];
         report[0] = 0x01; // Report ID
         // Index 12: Battery byte
-        report[12] = 0x19; // %90, şarjda
+        report[12] = 0x19; // 90%, charging
 
         bool success = AppPS.TryParseDualShock4Report(report, out int? level, out bool isCharging);
 
@@ -81,12 +81,12 @@ public class PlayStationControllerTests
     [Fact]
     public void TryParseDualSenseReport_Report0x31_Discharging_ParsesCorrectly()
     {
-        // 78-baytlık DualSense Bluetooth Extended Report (0x31)
+        // 78-byte DualSense Bluetooth Extended Report (0x31)
         byte[] report = new byte[78];
         report[0] = 0x31; // Report ID
         // Index 53: Battery byte
-        // Alt 4 bit: 0x06 -> %60
-        // Üst 4 bit: 0x00 -> deşarj
+        // Lower 4 bits: 0x06 -> 60%
+        // Upper 4 bits: 0x00 -> discharging
         report[53] = 0x06;
 
         bool success = AppPS.TryParseDualSenseReport(report, out int? level, out bool isCharging);
@@ -101,8 +101,8 @@ public class PlayStationControllerTests
     {
         byte[] report = new byte[78];
         report[0] = 0x31;
-        // Alt 4 bit: 0x0A -> 10 (%100)
-        // Üst 4 bit: 0x10 -> chargeStatus = 1 (şarj oluyor)
+        // Lower 4 bits: 0x0A -> 10 (100%)
+        // Upper 4 bits: 0x10 -> chargeStatus = 1 (charging)
         report[53] = 0x1A;
 
         bool success = AppPS.TryParseDualSenseReport(report, out int? level, out bool isCharging);
@@ -111,7 +111,7 @@ public class PlayStationControllerTests
         Assert.Equal(100, level);
         Assert.True(isCharging);
 
-        // chargeStatus = 2 (tam dolu)
+        // chargeStatus = 2 (fully charged)
         report[53] = 0x2A;
         success = AppPS.TryParseDualSenseReport(report, out level, out isCharging);
         Assert.True(success);
@@ -124,7 +124,7 @@ public class PlayStationControllerTests
     {
         byte[] report = new byte[64];
         report[0] = 0x01;
-        report[53] = 0x15; // %50, şarjda
+        report[53] = 0x15; // 50%, charging
 
         bool success = AppPS.TryParseDualSenseReport(report, out int? level, out bool isCharging);
 

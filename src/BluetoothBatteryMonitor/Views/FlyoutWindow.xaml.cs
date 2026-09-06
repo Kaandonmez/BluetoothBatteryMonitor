@@ -10,8 +10,8 @@ using BluetoothBatteryMonitor.ViewModels;
 namespace BluetoothBatteryMonitor.Views;
 
 /// <summary>
-/// Modern Windows 11 Fluent tasarımına sahip, görev çubuğuna yapışık Flyout penceresi.
-/// DWM yuvarlatılmış köşeler, gölge, akıcı açılış/kapanış animasyonu ve Deactivated oto-gizleme içerir.
+/// Flyout window docked to the taskbar with modern Windows 11 Fluent design.
+/// Includes DWM rounded corners, shadow, fluid open/close animations, and auto-hide on Deactivated.
 /// </summary>
 public partial class FlyoutWindow : Window
 {
@@ -34,7 +34,7 @@ public partial class FlyoutWindow : Window
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        // Kullanıcı pencerenin dışına tıkladığında yumuşak fade-out ile otomatik gizle
+        // Auto-hide with smooth fade-out when user clicks outside the window
         if (IsVisible && !_isAnimating)
         {
             _ = HideWithAnimationAsync();
@@ -42,7 +42,7 @@ public partial class FlyoutWindow : Window
     }
 
     /// <summary>
-    /// Pencerenin görünürlüğünü açar veya kapatır (Toggle).
+    /// Toggles the visibility of the window.
     /// </summary>
     public async Task ToggleVisibilityAsync()
     {
@@ -57,19 +57,19 @@ public partial class FlyoutWindow : Window
     }
 
     /// <summary>
-    /// Pencereyi görev çubuğu konumuna göre hesaplayıp akıcı bir animasyonla açar.
+    /// Calculates position based on taskbar location and displays the window with smooth animation.
     /// </summary>
     public async Task ShowWithAnimationAsync()
     {
         _isAnimating = true;
 
-        // Önceki animasyon saatlerini temizle
+        // Clear previous animation clocks
         BeginAnimation(OpacityProperty, null);
         BeginAnimation(TopProperty, null);
 
         var pos = TaskbarPositionHelper.CalculateFlyoutPosition(Width, Height);
         Left = pos.X;
-        Top = pos.Y + 12; // Hafif aşağıdan yukarı kayma efekti için başlangıç ofseti
+        Top = pos.Y + 12; // Initial offset for subtle slide-up effect
         Opacity = 0.0;
 
         Show();
@@ -101,7 +101,7 @@ public partial class FlyoutWindow : Window
     }
 
     /// <summary>
-    /// Zarif bir fade-out ve aşağı kayma ile pencereyi gizler.
+    /// Hides the window with an elegant fade-out and slide-down animation.
     /// </summary>
     public async Task HideWithAnimationAsync()
     {
@@ -133,7 +133,7 @@ public partial class FlyoutWindow : Window
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        // Gerçek uygulama kapanışı değilse pencereyi kapatma, sadece gizle
+        // Do not close the window unless actual application shutdown; only hide
         if (!_isRealShutdown)
         {
             e.Cancel = true;
@@ -155,11 +155,11 @@ public partial class FlyoutWindow : Window
 
         try
         {
-            // Windows 11 Yuvarlatılmış Köşeler (DWMWCP_ROUND = 2)
+            // Windows 11 Rounded Corners (DWMWCP_ROUND = 2)
             int cornerPreference = 2; // DWMWCP_ROUND
             DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
 
-            // Windows 11 Dark Mode DWM başlığı (Koyu tema pencere çerçevesi)
+            // Windows 11 Dark Mode DWM titlebar (Dark theme window border)
             int useDarkMode = 1;
             DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
         }

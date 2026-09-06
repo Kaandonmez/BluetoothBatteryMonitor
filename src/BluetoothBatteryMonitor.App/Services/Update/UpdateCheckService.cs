@@ -93,7 +93,7 @@ public class UpdateCheckService
             string? bestDownloadUrl = null;
             if (root.TryGetProperty("assets", out var assetsElem) && assetsElem.ValueKind == JsonValueKind.Array)
             {
-                // Önce Setup installer ara, yoksa App.exe veya zip ara
+                // Prefer Setup installer first, fallback to standalone App.exe or zip archive
                 foreach (var item in assetsElem.EnumerateArray())
                 {
                     string name = item.TryGetProperty("name", out var n) ? (n.GetString() ?? "") : "";

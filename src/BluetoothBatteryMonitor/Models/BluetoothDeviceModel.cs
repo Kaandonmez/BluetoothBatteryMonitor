@@ -3,80 +3,80 @@ using System;
 namespace BluetoothBatteryMonitor.Models;
 
 /// <summary>
-/// Sistemde algılanan Bluetooth cihazının modeli.
+/// Model representing a Bluetooth device detected on the system.
 /// </summary>
 public class BluetoothDeviceModel
 {
     /// <summary>
-    /// Benzersiz cihaz kimliği (Windows DeviceId veya Bluetooth MAC adresi).
+    /// Unique device identifier (Windows DeviceId or Bluetooth MAC address).
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// Cihaz adı (örn. "Xbox Wireless Controller", "AirPods Pro", "Logitech MX Master 3").
+    /// Device name (e.g. "Xbox Wireless Controller", "AirPods Pro", "Logitech MX Master 3").
     /// </summary>
     public string Name { get; set; } = "Bilinmeyen Cihaz";
 
     /// <summary>
-    /// Cihaz türü (Kulaklık, Fare, Klavye, Gamepad vb.).
+    /// Device type (Headphones, Mouse, Keyboard, Gamepad, etc.).
     /// </summary>
     public DeviceType Type { get; set; } = DeviceType.Unknown;
 
     /// <summary>
-    /// Cihazın şu an bağlı olup olmadığı.
+    /// Whether the device is currently connected.
     /// </summary>
     public bool IsConnected { get; set; }
     public string? AudioCodec { get; set; }
 
     /// <summary>
-    /// Cihaza ait pil bilgisi.
+    /// Battery information for the device.
     /// </summary>
     public BatteryInfo Battery { get; set; } = new();
 
     /// <summary>
-    /// Pil verisini sağlayan motor ("BLE GATT", "Windows PnP", "Apple AirPods Beacon", "Logitech HID++").
+    /// Engine providing the battery data ("BLE GATT", "Windows PnP", "Apple AirPods Beacon", "Logitech HID++").
     /// </summary>
     public string ProviderSource { get; set; } = "Bilinmiyor";
 
     /// <summary>
-    /// Cihazın en son aktif görüldüğü zaman.
+    /// Timestamp of when the device was last seen active.
     /// </summary>
     public DateTime LastSeen { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// Varsa Bluetooth donanım adresi (MAC ulong formatında).
-    /// Farklı servislerin (PnP, GATT, Beacon) aynı cihazı eşleştirmesi için kullanılır.
+    /// Bluetooth hardware address if available (in ulong MAC format).
+    /// Used by different services (PnP, GATT, Beacon) to match the same device.
     /// </summary>
     public ulong BluetoothAddress { get; set; }
     public ulong SecondaryBluetoothAddress { get; set; }
 
     /// <summary>
-    /// Durum metni ("Bağlı" veya "Bağlı Değil / Son Görülen Pil").
+    /// Status text ("Connected" or "Disconnected / Last Seen Battery").
     /// </summary>
     public string ConnectionStatusText => IsConnected ? "Bağlı" : (Battery.EffectiveLowestLevel.HasValue ? "Bağlı Değil (Son Görülen Pil)" : "Bağlı Değil");
 
     /// <summary>
-    /// İki cihaz kaydının aynı fiziksel cihazı temsil edip etmediğini kontrol eder.
-    /// MAC adresi, benzersiz DeviceId ve ayırt edici cihaz isimlerini akıllıca eşleştirir.
+    /// Checks whether two device records represent the same physical device.
+    /// Intelligently matches MAC address, unique DeviceId, and distinctive device names.
     /// </summary>
     public bool Matches(BluetoothDeviceModel other)
     {
         if (other == null) return false;
 
-        // 1. Doğrudan ulong Bluetooth MAC adresi eşleşmesi
+        // 1. Direct ulong Bluetooth MAC address match
         if (BluetoothAddress != 0 && other.BluetoothAddress != 0 && BluetoothAddress == other.BluetoothAddress)
         {
             return true;
         }
 
-        // 2. Birebir DeviceId eşleşmesi
+        // 2. Exact DeviceId match
         if (!string.IsNullOrEmpty(Id) && !string.IsNullOrEmpty(other.Id) &&
             string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        // 3. Id string'i içerisinden 48-bit MAC adresi tespiti ve eşleşmesi
+        // 3. 48-bit MAC address detection and matching from Id string
         ulong mac1 = BluetoothAddress != 0 ? BluetoothAddress : ExtractMacAddress(Id);
         ulong mac2 = other.BluetoothAddress != 0 ? other.BluetoothAddress : ExtractMacAddress(other.Id);
         if (mac1 != 0 && mac2 != 0 && mac1 == mac2)
@@ -84,7 +84,7 @@ public class BluetoothDeviceModel
             return true;
         }
 
-        // 4. Jenerik olmayan ayırt edici isim eşleşmesi
+        // 4. Distinctive non-generic name match
         if (!IsGenericName(Name) && !IsGenericName(other.Name) &&
             string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) &&
             (Type == other.Type || Type == DeviceType.Unknown || other.Type == DeviceType.Unknown))
@@ -96,13 +96,13 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// DeviceId içerisindeki 48-bit Bluetooth MAC adresini ayrıştırır.
+    /// Parses the 48-bit Bluetooth MAC address within DeviceId.
     /// </summary>
     public static ulong ExtractMacAddress(string? id)
     {
         if (string.IsNullOrWhiteSpace(id)) return 0;
 
-        // 00:11:22:33:44:55 veya 00-11-22-33-44-55 formatı
+        // 00:11:22:33:44:55 or 00-11-22-33-44-55 format
         var colonMatch = System.Text.RegularExpressions.Regex.Match(id, @"([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})");
         if (colonMatch.Success)
         {
@@ -113,7 +113,7 @@ public class BluetoothDeviceModel
             }
         }
 
-        // Dev_001BDC073185 veya AirPods_001BDC073185 bitişik 12 haneli hex
+        // Dev_001BDC073185 or AirPods_001BDC073185 contiguous 12-digit hex
         var hexMatch = System.Text.RegularExpressions.Regex.Match(id, @"([0-9a-fA-F]{12})");
         if (hexMatch.Success && ulong.TryParse(hexMatch.Value, System.Globalization.NumberStyles.HexNumber, null, out ulong macFromHex))
         {
@@ -124,7 +124,7 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// Verilen ismin jenerik bir yer tutucu olup olmadığını denetler.
+    /// Checks whether the given name is a generic placeholder.
     /// </summary>
     public static bool IsGenericName(string? name)
     {

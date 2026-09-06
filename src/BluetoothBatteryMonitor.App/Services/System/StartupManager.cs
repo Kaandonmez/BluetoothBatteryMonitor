@@ -47,7 +47,7 @@ public static class StartupManager
         }
         catch
         {
-            // İzin hatası vb.
+            // Registry permission error or denied access
         }
 
         return false;

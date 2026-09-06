@@ -76,6 +76,11 @@ Get the latest official release for Windows 10 & 11 (64-bit):
       </td>
     </tr>
   </table>
+
+  <br/>
+
+  <h3>🎨 Windows 11 Desktop & Start Menu Integration</h3>
+  <img src="docs/desktop_startmenu_preview.png" alt="Windows 11 Desktop Shortcut and Start Menu Integration" width="820" />
 </div>
 
 ---

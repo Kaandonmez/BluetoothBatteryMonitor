@@ -23,7 +23,7 @@ public class AppSettings
     public Dictionary<string, string> DeviceNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Cihaza özel eşik tanımlıysa onu döner, tanımlı değilse global LowBatteryThreshold değerini döner.
+    /// Returns device-specific custom threshold if defined, otherwise falls back to global LowBatteryThreshold.
     /// </summary>
     public int GetEffectiveLowBatteryThreshold(string? deviceId, ulong macAddress = 0)
     {
@@ -136,7 +136,7 @@ public class AppSettings
         }
         catch
         {
-            // Varsayılan ayarlarla devam edilir
+            // Fallback to default settings on deserialization error
         }
 
         return new AppSettings();

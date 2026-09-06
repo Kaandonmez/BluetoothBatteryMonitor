@@ -1,7 +1,7 @@
 namespace BluetoothBatteryMonitor.Models;
 
 /// <summary>
-/// Bluetooth cihaz türleri.
+/// Bluetooth device types.
 /// </summary>
 public enum DeviceType
 {
@@ -20,8 +20,8 @@ public enum DeviceType
 }
 
 /// <summary>
-/// Cihaz türü için genişletme metotları (ikon glifi, yerel isim).
-/// Segoe Fluent Icons / Segoe MDL2 Assets standart karakter kodları kullanılır.
+/// Extension methods for device type (icon glyph, localized name).
+/// Uses standard character codes from Segoe Fluent Icons / Segoe MDL2 Assets.
 /// </summary>
 public static class DeviceTypeExtensions
 {

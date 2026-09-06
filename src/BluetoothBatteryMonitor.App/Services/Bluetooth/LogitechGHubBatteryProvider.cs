@@ -22,9 +22,9 @@ public record LogitechGHubBatteryInfo(
     DeviceType DeviceType);
 
 /// <summary>
-/// Arka planda çalışan Logitech G HUB yazılımının yerel WebSocket API'sine (ws://127.0.0.1:9010) bağlanarak
-/// LIGHTSPEED kablosuz oyuncu fareleri, klavyeleri ve kulaklıklarının (G Pro, G502, G915 vb.)
-/// anlık pil ve şarj durumlarını okuyan ve dinleyen sağlayıcı.
+/// Connects to the local WebSocket API of running Logitech G HUB software (ws://127.0.0.1:9010)
+/// to read and monitor real-time battery and charging status for LIGHTSPEED wireless gaming mice,
+/// keyboards, and headsets (G Pro, G502, G915, etc.).
 /// </summary>
 public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
 {
@@ -45,7 +45,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
 
     public async Task<IReadOnlyList<BluetoothDeviceModel>> GetDevicesAsync(CancellationToken cancellationToken = default)
     {
-        // WebSocket bağlıysa mevcut önbelleği veya anlık sorguyu dön
+        // If WebSocket is connected, return cached or queried list
         if (_webSocket != null && _webSocket.State == WebSocketState.Open)
         {
             try
@@ -54,13 +54,13 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Gönderim başarısız olursa mevcut listeyi dön
+                // If sending query fails, return current list
             }
 
             return _devices.Values.ToList();
         }
 
-        // Bağlı değilse tek seferlik hızlı kontrol yap (G HUB çalışmıyorsa 1.2 saniye içinde döner)
+        // If not connected, perform one-shot fast check (returns in 1.2s if G HUB is not running)
         try
         {
             using var quickCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -85,7 +85,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // G HUB çalışmıyor veya port kapalı, sessizce geç
+            // G HUB is not running or port is closed, ignore silently
         }
 
         return _devices.Values.ToList();
@@ -129,11 +129,11 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
 
                 if (_webSocket.State == WebSocketState.Open)
                 {
-                    // Cihaz listesi ve batarya değişiklik aboneliklerini gönder
+                    // Send device list and battery state change subscriptions
                     await SendQueryDevicesListAsync(_webSocket, token);
                     await SendSubscribeBatteryChangesAsync(_webSocket, token);
 
-                    // Gelen olayları sürekli oku
+                    // Continuously read incoming events
                     while (_webSocket.State == WebSocketState.Open && !token.IsCancellationRequested)
                     {
                         string? message = await ReceiveTextMessageAsync(_webSocket, token);
@@ -149,12 +149,12 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // G HUB açık değil veya bağlantı koptu, yeniden denemeden önce bekle
+                // G HUB is not open or disconnected, wait before retrying
             }
 
             try
             {
-                // Yeniden bağlanma aralığı (G HUB açıldığında hemen yakalamak için 20 sn)
+                // Reconnection delay (20s interval to quickly detect when G HUB opens)
                 await Task.Delay(TimeSpan.FromSeconds(20), token);
             }
             catch (OperationCanceledException)
@@ -207,7 +207,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. Cihaz listesi yanıtı kontrolü
+            // 1. Check device list response
             var devices = ParseDevicesList(json);
             if (devices.Count > 0)
             {
@@ -219,7 +219,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
                 return;
             }
 
-            // 2. Batarya durum değişikliği olayı kontrolü
+            // 2. Check battery state changed event
             var state = ParseBatteryStateChanged(json);
             if (state.HasValue && !string.IsNullOrWhiteSpace(state.Value.DeviceId))
             {
@@ -240,12 +240,12 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // JSON ayrıştırma istisnasını yut
+            // Suppress JSON parsing exception
         }
     }
 
     /// <summary>
-    /// G HUB '/devices/list' veya benzeri JSON yanıtından cihazları ve pil durumlarını ayrıştırır.
+    /// Parses devices and battery states from G HUB '/devices/list' or similar JSON responses.
     /// </summary>
     public static List<BluetoothDeviceModel> ParseDevicesList(string json)
     {
@@ -257,7 +257,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // payload, result, items veya doğrudan dizi arayışı
+            // Search for payload, result, items, or direct array
             JsonElement itemsElement = default;
             bool foundArray = false;
 
@@ -303,7 +303,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
             foreach (var item in itemsElement.EnumerateArray())
             {
                 string id = GetStringProp(item, "id", "deviceId") ?? string.Empty;
-                string name = GetStringProp(item, "name", "displayName", "model", "modelName") ?? "Logitech G Gaming Cihazı";
+                string name = GetStringProp(item, "name", "displayName", "model", "modelName") ?? "Logitech G Gaming Device";
                 string modelName = GetStringProp(item, "model", "modelName") ?? name;
 
                 if (string.IsNullOrWhiteSpace(id)) continue;
@@ -344,14 +344,14 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // JSON hatası
+            // JSON parsing error
         }
 
         return result;
     }
 
     /// <summary>
-    /// G HUB '/battery/state/changed' olay JSON paketini ayrıştırır.
+    /// Parses G HUB '/battery/state/changed' event JSON packet.
     /// </summary>
     public static (string? DeviceId, int? BatteryLevel, bool IsCharging, string? Status)? ParseBatteryStateChanged(string json)
     {
@@ -414,7 +414,7 @@ public class LogitechGHubBatteryProvider : IBluetoothBatteryProvider
 
     public static string CleanGHubName(string raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "Logitech G Gaming Cihazı";
+        if (string.IsNullOrWhiteSpace(raw)) return "Logitech G Gaming Device";
         return raw.Replace("Logitech ", "", StringComparison.OrdinalIgnoreCase)
                   .Replace("G HUB ", "", StringComparison.OrdinalIgnoreCase)
                   .Trim();

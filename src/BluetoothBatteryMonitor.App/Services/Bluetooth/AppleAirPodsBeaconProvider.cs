@@ -46,7 +46,7 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
     public Task<IReadOnlyList<BluetoothDeviceModel>> GetDevicesAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.Now;
-        // Kapağı kapatılmış veya sinyali kesilmiş eski AirPods beacon'larını temizle
+        // Clean up stale AirPods beacons whose case closed or stopped advertising
         foreach (var kvp in _detectedAirPods)
         {
             if (now - kvp.Value.LastUpdated > BeaconTimeout)
@@ -69,7 +69,7 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Bluetooth kapalı veya servis kullanılamıyor
+            // Bluetooth radio is disabled or service unavailable
         }
     }
 
@@ -95,10 +95,10 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
                 byte[] data = mData.Data.ToArray();
                 if (data.Length < 9) continue;
 
-                // SADECE ve SADECE Proximity Pairing (0x07) mesajları AirPods pil telemetrisi taşır.
-                // 0x10 (Nearby Info) ve 0x05 (AirDrop) gibi Continuity mesajları pil taşımaz;
-                // aksine bayt 5'te rastgele iOS aktivite bayrakları (örn: 0x13 -> %10 ve %30) taşıyarak
-                // kulaklık pilinin %10 ve %30'a çökmesine neden olur!
+                // ONLY Proximity Pairing (0x07) messages carry AirPods battery telemetry.
+                // Continuity messages such as 0x10 (Nearby Info) and 0x05 (AirDrop) do not carry battery info;
+                // instead byte 5 carries random iOS activity flags (e.g. 0x13 -> 10% and 30%)
+                // causing apparent false battery drops to 10% and 30%!
                 byte packetType = data[0];
                 if (packetType != 0x07) continue;
 
@@ -107,7 +107,7 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
                 string candidateId = $"AirPods_{formattedMac}";
                 _detectedAirPods.TryGetValue(candidateId, out var existing);
 
-                // Eğer MAC adresi BLE RPA rotasyonu nedeniyle değiştiyse son 60 sn içindeki aktif AirPods'u smoothing için kullan
+                // If MAC address rotated due to BLE RPA, use active AirPods seen within the last 60 seconds for smoothing
                 if (existing == null && _detectedAirPods.Count > 0)
                 {
                     existing = _detectedAirPods.Values
@@ -116,7 +116,7 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
                         .FirstOrDefault();
                 }
 
-                // AirPods modelini ve pillerini ayrıştır
+                // Parse AirPods model and battery telemetry
                 var parsedModel = ParseAirPodsData(args.BluetoothAddress, data, existing);
                 if (parsedModel != null)
                 {
@@ -127,18 +127,18 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Ayrıştırma veya paket hatası yutulur
+            // Suppress packet parsing error
         }
     }
 
     public static BluetoothDeviceModel? ParseAirPodsData(ulong address, byte[] data, BluetoothDeviceModel? existing = null)
     {
-        // En az 9 bayt olmalı ve Tip 0x07 (Proximity Pairing) olmalı
+        // Must be at least 9 bytes and Type 0x07 (Proximity Pairing)
         if (data.Length < 9 || data[0] != 0x07) return null;
 
-        // Model tespiti:
-        // Gerçek Apple paketlerinde data[2] = 0x01 (prefix) olup Model ID data[3] ve data[4]'tedir.
-        // Bazı klon/test paketlerinde ise data[2] ve data[3]'tedir.
+        // Model detection:
+        // In genuine Apple packets data[2] = 0x01 (prefix) and Model ID is at data[3] and data[4].
+        // In some clone/test packets Model ID is at data[2] and data[3].
         ushort modelId = 0;
         if (data.Length > 4 && data[2] == 0x01)
         {
@@ -160,21 +160,21 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
 
         string modelName = GetModelName(modelId);
 
-        // Standart AirPods Proximity indeksleri:
-        // Tip 0x07 (Proximity): offset = 6 (data[6]: Pod A / Pod B pilleri)
-        // data[7]: Şarj bayrakları ve Kutu pili
+        // Standard AirPods Proximity offsets:
+        // Type 0x07 (Proximity): offset = 6 (data[6]: Pod A / Pod B batteries)
+        // data[7]: Charging flags and Case battery
         const int offset = 6;
         if (offset + 1 >= data.Length) return null;
 
-        // data[offset]: Üst nibble = Pod A, Alt nibble = Pod B
+        // data[offset]: Upper nibble = Pod A, Lower nibble = Pod B
         int nibble1 = (data[offset] >> 4) & 0x0F;
         int nibble2 = data[offset] & 0x0F;
 
-        // data[offset + 1]: ÜST nibble = Şarj durum bitleri, ALT nibble = Kutu pili
+        // data[offset + 1]: Upper nibble = Charging bits, Lower nibble = Case battery
         int chargingBits = (data[offset + 1] >> 4) & 0x0F;
         int caseNibble = data[offset + 1] & 0x0F;
 
-        // data[5] Status baytı (Bit 5 = 0x20: isFlipped) veya data[8]
+        // data[5] Status byte (Bit 5 = 0x20: isFlipped) or data[8]
         bool isFlipped = (data[5] & 0x20) != 0 || (data.Length > 8 && (data[8] & 0x20) != 0);
 
         int? podA = ConvertNibbleToPercent(nibble1);
@@ -193,9 +193,9 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
 
         var now = DateTime.Now;
 
-        // Yumuşatma (Smoothing Cache):
-        // Apple anlık olarak 0x0F (15 = bilinmiyor / N/A / kulakta değil) raporladığında
-        // son 60 saniye içindeki son geçerli seviyeleri koru
+        // Smoothing Cache:
+        // When Apple momentarily reports 0x0F (15 = unknown / N/A / not in ear),
+        // preserve last known valid levels within 60 seconds
         if (!leftLevel.HasValue && existing?.LeftBatteryLevel != null && (now - existing.LastUpdated).TotalSeconds < 60)
         {
             leftLevel = existing.LeftBatteryLevel;
@@ -214,10 +214,10 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
             caseCharging = existing.IsCaseCharging;
         }
 
-        // Anti-Spike / Anomali Filtresi:
-        // Fiziksel olarak bir lityum pil 10 saniye içinde %100'den %10 veya %30'a düşemez.
-        // Eğer önceki seviye >= 60 iken yeni seviye aniden <= 35'e düşüyorsa (ve kulaklık şarjda değilse),
-        // geçici paket parazitlerini önlemek için önceki kararlı seviyeyi koru.
+        // Anti-Spike / Anomaly Filter:
+        // Physically a lithium battery cannot drop from 100% to 10% or 30% within 10 seconds.
+        // If previous level >= 60 and new level abruptly drops to <= 35 (while earbud is not charging),
+        // preserve previous stable level to filter transient packet glitches.
         if (existing != null && (now - existing.LastUpdated).TotalSeconds < 15)
         {
             if (existing.LeftBatteryLevel.HasValue && existing.LeftBatteryLevel.Value >= 60 && leftLevel.HasValue && leftLevel.Value <= 35 && !isLeftCharging)
@@ -236,7 +236,7 @@ public class AppleAirPodsBeaconProvider : IBluetoothBatteryProvider
             return null;
         }
 
-        // Ana pil seviyesi olarak kulaklıkların kendisini seç (kutu pili kulaklıkların ana pilini ezmemeli)
+        // Use earbuds battery as main level (case battery must not override earbuds level)
         int? mainLevel = null;
         if (leftLevel.HasValue && rightLevel.HasValue)
         {

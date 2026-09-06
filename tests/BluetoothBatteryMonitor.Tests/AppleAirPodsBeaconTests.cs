@@ -8,16 +8,16 @@ public class AppleAirPodsBeaconTests
     [Fact]
     public void TryParseAirPodsAdvertisement_ValidAirPodsProPacket_ParsesCorrectly()
     {
-        // 27 baytlık simüle edilmiş AirPods Pro beacon paketi
+        // 27-byte simulated AirPods Pro beacon packet
         byte[] packet = new byte[27];
-        packet[0] = 0x07; // Tip 0x07 (Proximity Pairing)
-        packet[1] = 0x19; // Uzunluk 25 bayt
+        packet[0] = 0x07; // Type 0x07 (Proximity Pairing)
+        packet[1] = 0x19; // Length 25 bytes
         packet[2] = 0x0E; // Model MSB
-        packet[3] = 0x20; // Model LSB -> 0x0E20 (AirPods Pro 1. Nesil)
+        packet[3] = 0x20; // Model LSB -> 0x0E20 (AirPods Pro 1st Gen)
         packet[4] = 0x00;
         packet[5] = 0x00;
-        packet[6] = 0x89; // Nibble 1 = 8 (%80), Nibble 2 = 9 (%90)
-        packet[7] = 0x1A; // Charging bits: 0x1 (Pod A charging), Case nibble: 0xA (%100)
+        packet[6] = 0x89; // Nibble 1 = 8 (80%), Nibble 2 = 9 (90%)
+        packet[7] = 0x1A; // Charging bits: 0x1 (Pod A charging), Case nibble: 0xA (100%)
         packet[8] = 0x00; // isFlipped = false
 
         bool success = AppleAirPodsBeaconProvider.TryParseAirPodsAdvertisement(packet, out var data);
@@ -40,16 +40,16 @@ public class AppleAirPodsBeaconTests
         packet[0] = 0x07;
         packet[1] = 0x19;
         packet[2] = 0x0F;
-        packet[3] = 0x20; // AirPods 2. Nesil
-        packet[6] = 0x75; // Pod A = 7 (%70), Pod B = 5 (%50)
-        packet[7] = 0x28; // Pod B şarjda (bit 1 = 0x02), Kutu = 8 (%80)
-        packet[8] = 0x20; // isFlipped = true (0x20 biti aktif)
+        packet[3] = 0x20; // AirPods 2nd Gen
+        packet[6] = 0x75; // Pod A = 7 (70%), Pod B = 5 (50%)
+        packet[7] = 0x28; // Pod B charging (bit 1 = 0x02), Case = 8 (80%)
+        packet[8] = 0x20; // isFlipped = true (0x20 bit active)
 
         bool success = AppleAirPodsBeaconProvider.TryParseAirPodsAdvertisement(packet, out var data);
 
         Assert.True(success);
         Assert.NotNull(data);
-        // Flipped olduğunda: Left = Pod B (%50), Right = Pod A (%70)
+        // When flipped: Left = Pod B (50%), Right = Pod A (70%)
         Assert.Equal(50, data.LeftLevel);
         Assert.True(data.IsLeftCharging);
         Assert.Equal(70, data.RightLevel);
@@ -63,9 +63,9 @@ public class AppleAirPodsBeaconTests
         packet[0] = 0x07;
         packet[1] = 0x19;
         packet[2] = 0x13;
-        packet[3] = 0x20; // AirPods 3. Nesil
-        packet[6] = 0xFF; // Her iki kulaklık da 15 (0x0F) -> Bağlantısız / Kutuda değil
-        packet[7] = 0x0F; // Kutu da 15 -> Bilinmiyor
+        packet[3] = 0x20; // AirPods 3rd Gen
+        packet[6] = 0xFF; // Both buds are 15 (0x0F) -> Disconnected / Not in case
+        packet[7] = 0x0F; // Case is also 15 -> Unknown
 
         bool success = AppleAirPodsBeaconProvider.TryParseAirPodsAdvertisement(packet, out var data);
 

@@ -17,8 +17,8 @@ public record NintendoBatteryInfo(
     string ModelName);
 
 /// <summary>
-/// Nintendo Switch Joy-Con (L), Joy-Con (R) ve Pro Controller kablosuz oyun kolları için
-/// Bluetooth HID telemetri raporlarını (Report 0x21, 0x30, 0x31, 0x3F) ayrıştıran sağlayıcı.
+/// Provider that parses Bluetooth HID telemetry reports (Report 0x21, 0x30, 0x31, 0x3F)
+/// for Nintendo Switch Joy-Con (L), Joy-Con (R), and Pro Controller wireless gamepads.
 /// </summary>
 public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
 {
@@ -48,7 +48,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. PnP Cihazlarını Tara
+            // 1. Scan PnP devices
             string aqs = $"(System.Devices.DeviceInstanceId:~~\"{NintendoVendorId}\")";
             var props = new[]
             {
@@ -95,7 +95,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
                 resultList.Add(model);
             }
 
-            // 2. Win32 HID Interface Telemetri Raporları
+            // 2. Win32 HID Interface Telemetry Reports
             string hidSelector = $"System.Devices.InterfaceClassGuid:=\"{HidInterfaceGuid}\"";
             var hidDevices = await DeviceInformation.FindAllAsync(hidSelector).AsTask(cancellationToken);
 
@@ -144,7 +144,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // İstisnayı sessizce yakala
+            // Suppress scan error
         }
 
         return resultList;
@@ -178,7 +178,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Okuma hatası
+                // Read error
             }
 
             return null;
@@ -224,7 +224,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Sessizce geç
+                // Silently ignore transient errors
             }
 
             try
@@ -239,8 +239,8 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// Nintendo Switch HID Input Report 0x21, 0x30, 0x31 veya 0x3F baytlarını ayrıştırır.
-    /// Byte 2 (veya Simple Report Byte 2) yüksek 4-bit (high nibble) pil ve şarj durumunu içerir.
+    /// Parses Nintendo Switch HID Input Report 0x21, 0x30, 0x31 or 0x3F bytes.
+    /// Byte 2 (or Simple Report Byte 2) high nibble contains battery level step and charging status.
     /// </summary>
     public static bool TryParseNintendoReport(byte[] report, out int? batteryLevel, out bool isCharging)
     {
@@ -254,8 +254,8 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
 
         byte reportId = report[0];
 
-        // Rapor 0x21, 0x30, 0x31: Byte 2'de pil bilgisi
-        // Rapor 0x3F: Byte 2'de pil bilgisi
+        // Report 0x21, 0x30, 0x31: Battery info in Byte 2
+        // Report 0x3F: Battery info in Byte 2
         if (reportId is 0x21 or 0x30 or 0x31 or 0x3F)
         {
             byte batByte = report[2];
@@ -305,7 +305,7 @@ public class NintendoSwitchBatteryProvider : IBluetoothBatteryProvider
             PidJoyConR => "Nintendo Joy-Con (R)",
             PidProController => "Nintendo Switch Pro Controller",
             PidJoyConChargingGrip => "Nintendo Joy-Con Charging Grip",
-            _ => "Nintendo Switch Kontrolcü"
+            _ => "Nintendo Switch Controller"
         };
     }
 

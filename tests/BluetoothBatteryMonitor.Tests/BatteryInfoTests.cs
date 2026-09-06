@@ -38,8 +38,8 @@ public class BatteryInfoTests
     {
         var info = new BatteryInfo
         {
-            Level = 150, // Geçersiz
-            LeftLevel = -5, // Geçersiz
+            Level = 150, // Invalid
+            LeftLevel = -5, // Invalid
             RightLevel = 35
         };
 
@@ -47,12 +47,12 @@ public class BatteryInfoTests
     }
 
     [Theory]
-    [InlineData(100, "#22C55E")] // Yeşil
-    [InlineData(40, "#22C55E")]  // Yeşil (sınır)
-    [InlineData(39, "#EAB308")]  // Sarı
-    [InlineData(20, "#EAB308")]  // Sarı (sınır)
-    [InlineData(19, "#EF4444")]  // Kırmızı
-    [InlineData(5, "#EF4444")]   // Kırmızı
+    [InlineData(100, "#22C55E")] // Green
+    [InlineData(40, "#22C55E")]  // Green (boundary)
+    [InlineData(39, "#EAB308")]  // Yellow
+    [InlineData(20, "#EAB308")]  // Yellow (boundary)
+    [InlineData(19, "#EF4444")]  // Red
+    [InlineData(5, "#EF4444")]   // Red
     public void StatusColor_ReturnsExpectedColorCode(int level, string expectedColor)
     {
         var info = new BatteryInfo { Level = level };
@@ -99,13 +99,13 @@ public class BatteryInfoTests
         var info = new BatteryInfo { Level = 0 };
         Assert.Equal(0, info.EffectiveLowestLevel);
         Assert.True(info.HasBattery);
-        Assert.Equal("#EF4444", info.StatusColor); // %0 Kırmızı olmalı
+        Assert.Equal("#EF4444", info.StatusColor); // 0% should be Red
     }
 
     [Fact]
     public void EffectiveLowestLevel_TwsUpdate_DoesNotGetPoisonedByOldLevel()
     {
-        // Önceki seviye 40 idi ve Level alanına yazılmıştı
+        // Previous level was 40 and was stored in Level property
         var info = new BatteryInfo
         {
             HasMultipleBatteries = true,
@@ -117,12 +117,12 @@ public class BatteryInfoTests
 
         Assert.Equal(40, info.EffectiveLowestLevel);
 
-        // Şimdi kulaklıklar şarj oldu ve yeni seviyeler geldi (hepsi 80 ve üstü)
+        // Now earbuds charged and new levels arrived (all 80 and above)
         info.LeftLevel = 80;
         info.RightLevel = 85;
         info.CaseLevel = 90;
 
-        // Eski Level = 40 değeri yeni TWS hesaplamasını zehirlememeli!
+        // Old Level = 40 value should not poison the new TWS calculation!
         Assert.Equal(80, info.EffectiveLowestLevel);
     }
 }

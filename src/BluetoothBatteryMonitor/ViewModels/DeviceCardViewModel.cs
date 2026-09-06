@@ -5,7 +5,7 @@ using BluetoothBatteryMonitor.Models;
 namespace BluetoothBatteryMonitor.ViewModels;
 
 /// <summary>
-/// Flyout penceresindeki tek bir cihaz kartının durumunu ve verilerini yöneten ViewModel.
+/// ViewModel managing the state and data of an individual device card in the flyout window.
 /// </summary>
 public partial class DeviceCardViewModel : ObservableObject
 {
@@ -88,7 +88,7 @@ public partial class DeviceCardViewModel : ObservableObject
     private string _lastUpdatedText = string.Empty;
 
     /// <summary>
-    /// Modeldeki güncel verileri ViewModel özelliklerine aktarır.
+    /// Updates ViewModel properties from the current data in the model.
     /// </summary>
     public void UpdateFromModel()
     {

@@ -5,70 +5,70 @@ using System.Linq;
 namespace BluetoothBatteryMonitor.Models;
 
 /// <summary>
-/// Bluetooth cihazına ait pil verileri ve durum bilgisi.
-/// Hem standart tekil pilleri hem de AirPods gibi çoklu (Sol, Sağ, Kutu) pilleri destekler.
+/// Battery data and state information for a Bluetooth device.
+/// Supports both standard single batteries and multiple batteries (Left, Right, Case) such as AirPods.
 /// </summary>
 public class BatteryInfo
 {
     /// <summary>
-    /// Genel veya tekil pil yüzdesi (0-100).
+    /// Overall or single battery percentage (0-100).
     /// </summary>
     public int? Level { get; set; }
 
     /// <summary>
-    /// Cihaz genelinde şarj edilip edilmediği.
+    /// Whether the device is charging overall.
     /// </summary>
     public bool IsCharging { get; set; }
 
     /// <summary>
-    /// Çoklu pil (AirPods Sol/Sağ/Kutu gibi) desteği olup olmadığı.
+    /// Whether multiple battery support (such as AirPods Left/Right/Case) is available.
     /// </summary>
     public bool HasMultipleBatteries { get; set; }
 
     /// <summary>
-    /// TWS Sol kulaklık pili (0-100).
+    /// TWS Left earbud battery (0-100).
     /// </summary>
     public int? LeftLevel { get; set; }
 
     /// <summary>
-    /// Sol kulaklığın şarj olup olmadığı.
+    /// Whether the left earbud is charging.
     /// </summary>
     public bool IsLeftCharging { get; set; }
 
     /// <summary>
-    /// TWS Sağ kulaklık pili (0-100).
+    /// TWS Right earbud battery (0-100).
     /// </summary>
     public int? RightLevel { get; set; }
 
     /// <summary>
-    /// Sağ kulaklığın şarj olup olmadığı.
+    /// Whether the right earbud is charging.
     /// </summary>
     public bool IsRightCharging { get; set; }
 
     /// <summary>
-    /// TWS Şarj Kutusu pili (0-100).
+    /// TWS Charging Case battery (0-100).
     /// </summary>
     public int? CaseLevel { get; set; }
 
     /// <summary>
-    /// Şarj kutusunun şarj olup olmadığı.
+    /// Whether the charging case is charging.
     /// </summary>
     public bool IsCaseCharging { get; set; }
 
     /// <summary>
-    /// Pil bilgisinin en son güncellendiği zaman damgası.
+    /// Timestamp of when the battery information was last updated.
     /// </summary>
     public DateTime LastUpdated { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// Geçerli bir pil seviyesi okunup okunmadığı (0 dahil).
+    /// Whether a valid battery level was read (including 0).
     /// </summary>
     public bool HasBattery => EffectiveLowestLevel.HasValue;
 
     /// <summary>
-    /// Mevcut tüm pil bileşenleri (Sol, Sağ, Kutu veya Genel) arasındaki en düşük aktif pil yüzdesini hesaplar.
-    /// TWS kulaklıklarda aktif kulaklık/kutu pillerinin minimumunu alır; Level değeri eski kalsa dahi zehirleme yapmaz.
-    /// Dynamic tray icon ve kritik uyarılar bu değeri baz alır.
+    /// Calculates the lowest active battery percentage among all available battery components (Left, Right, Case, or Overall).
+    /// In TWS earbuds, takes the minimum of active earbud/case batteries; avoids poisoning even if Level is stale.
+    /// Dynamic tray icon and critical alerts are based on this value.
     /// </summary>
     public int? EffectiveLowestLevel
     {
@@ -109,10 +109,10 @@ public class BatteryInfo
     }
 
     /// <summary>
-    /// Renk kodlaması:
-    /// Yeşil: %40 ve üzeri (#107C41 / #22C55E)
-    /// Sarı: %20 - %39 (#F7B500 / #EAB308)
-    /// Kırmızı: <%20 (#E81123 / #EF4444)
+    /// Color coding:
+    /// Green: 40% and above (#107C41 / #22C55E)
+    /// Yellow: 20% - 39% (#F7B500 / #EAB308)
+    /// Red: &lt;20% (#E81123 / #EF4444)
     /// </summary>
     public string StatusColor
     {
@@ -121,25 +121,25 @@ public class BatteryInfo
             var lowest = EffectiveLowestLevel;
             if (!lowest.HasValue)
             {
-                return "#8A8886"; // Nötr Gri
+                return "#8A8886"; // Neutral Gray
             }
 
             if (lowest.Value >= 40)
             {
-                return "#22C55E"; // Yeşil (Fluent Success)
+                return "#22C55E"; // Green (Fluent Success)
             }
 
             if (lowest.Value >= 20)
             {
-                return "#EAB308"; // Sarı / Amber (Fluent Warning)
+                return "#EAB308"; // Yellow / Amber (Fluent Warning)
             }
 
-            return "#EF4444"; // Kırmızı (Fluent Critical)
+            return "#EF4444"; // Red (Fluent Critical)
         }
     }
 
     /// <summary>
-    /// Kullanıcı dostu metin özeti.
+    /// User-friendly text summary.
     /// </summary>
     public string BatterySummaryText
     {

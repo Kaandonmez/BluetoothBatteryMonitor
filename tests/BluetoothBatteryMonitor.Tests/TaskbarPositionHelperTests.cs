@@ -13,13 +13,13 @@ public class TaskbarPositionHelperTests
     [Fact]
     public void CalculateFlyoutPosition_DoesNotReturnNegativeCoordinates()
     {
-        // Standart Flyout boyutları
+        // Standard Flyout dimensions
         double width = 380;
         double height = 500;
 
         var point = TaskbarPositionHelper.CalculateFlyoutPosition(width, height);
 
-        // Ekran koordinatları negatif olmamalı
+        // Screen coordinates should not be negative
         Assert.True(point.X >= 0, $"X koordinatı negatif olamaz: {point.X}");
         Assert.True(point.Y >= 0, $"Y koordinatı negatif olamaz: {point.Y}");
     }
@@ -34,7 +34,7 @@ public class TaskbarPositionHelperTests
         var workArea = System.Windows.SystemParameters.WorkArea;
         var point = TaskbarPositionHelper.CalculateFlyoutPosition(width, height);
 
-        // Pencere çalışma alanı sınırları içinde kalmalıdır
+        // Window must remain within work area boundaries
         Assert.True(point.X >= workArea.Left, $"X ({point.X}) workArea.Left ({workArea.Left}) değerinden küçük olamaz");
         Assert.True(point.Y >= workArea.Top, $"Y ({point.Y}) workArea.Top ({workArea.Top}) değerinden küçük olamaz");
         Assert.True(point.X + width <= workArea.Right + 0.1, $"Sağ kenar ({point.X + width}) workArea.Right ({workArea.Right}) sınırını aşamaz");
@@ -68,7 +68,7 @@ public class TaskbarPositionHelperTests
     [Fact]
     public void App_DeviceItemViewModel_HasBatteryFlags_CorrectlySet()
     {
-        // 1. Standart pilli cihaz
+        // 1. Standard battery device
         var standard = new AppDeviceModel
         {
             Id = "DEV_STD",
@@ -81,7 +81,7 @@ public class TaskbarPositionHelperTests
         Assert.True(vmStd.BatteryText == "100%" || vmStd.BatteryText == "%100", $"Unexpected battery text: {vmStd.BatteryText}");
         Assert.False(vmStd.IsTws);
 
-        // 2. Pilsiz cihaz
+        // 2. Device without battery
         var noBat = new AppDeviceModel
         {
             Id = "DEV_NOBAT",
@@ -93,7 +93,7 @@ public class TaskbarPositionHelperTests
         Assert.Equal(0, vmNoBat.BatteryProgress);
         Assert.Equal("Unknown", vmNoBat.BatteryText);
 
-        // 3. TWS tek taraflı kulaklık
+        // 3. TWS single-sided earbud
         var tws = new AppDeviceModel
         {
             Id = "DEV_TWS",

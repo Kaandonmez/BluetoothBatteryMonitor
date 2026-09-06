@@ -14,9 +14,9 @@ using BluetoothBatteryMonitor.App.Services.Audio;
 namespace BluetoothBatteryMonitor.App.Services.Bluetooth;
 
 /// <summary>
-/// Sistemdeki tüm Bluetooth cihazlarının anlık ve gerçek canlı bağlantı durumunu (ACL / GATT bağlantısı)
-/// yüksek performanslı Win32 API'leri, WinRT AssociationEndpoint (AEP) telemetrisi ve CoreAudio durumları
-/// üzerinden teyit eden merkezi bağlantı denetleyicisi.
+/// Central Bluetooth connection state verifier that detects instantaneous, live connection states
+/// (ACL / GATT connections) across all system Bluetooth devices via high-performance Win32 APIs,
+/// WinRT AssociationEndpoint (AEP) telemetry, and Windows CoreAudio endpoints.
 /// </summary>
 public static class BluetoothConnectionChecker
 {
@@ -24,7 +24,7 @@ public static class BluetoothConnectionChecker
     private const string AepDeviceAddressKey = "System.Devices.Aep.DeviceAddress";
 
     /// <summary>
-    /// Bir tarama döngüsü anında yakalanmış canlı Bluetooth bağlantı anlık görüntüsü (Snapshot).
+    /// Live Bluetooth connection state snapshot captured during a scan cycle (< 50ms).
     /// </summary>
     public class BluetoothConnectionSnapshot
     {
@@ -37,41 +37,41 @@ public static class BluetoothConnectionChecker
         public HashSet<string> ActiveAudioNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Anlık görüntü verilerine göre cihazın aktif olarak bağlı olup olmadığını belirler.
-        /// Kesin tespit yapılamazsa false döner.
+        /// Determines whether device is actively connected according to snapshot data.
+        /// Returns false if connection cannot be confirmed.
         /// </summary>
         public bool? TryGetStatus(ulong mac, string? id, string? name, DeviceType type)
         {
             string cleanName = !string.IsNullOrWhiteSpace(name) ? BluetoothDeviceModel.CleanNameForComparison(name) : string.Empty;
 
-            // 1. MAC adresi biliniyorsa: Win32 Classic Bluetooth ve WinRT AEP kontrolleri (Hardware MAC)
+            // 1. If MAC address is known: verify via Win32 Classic Bluetooth and WinRT AEP (Hardware MAC)
             if (mac != 0)
             {
                 bool inClassic = ClassicConnectedByMac.TryGetValue(mac, out bool classicConnected);
                 bool inAep = AepConnectedByMac.TryGetValue(mac, out bool aepConnected);
                 bool isKnownPaired = KnownPairedMacs.Contains(mac);
 
-                // Herhangi biri bağlı diyorsa KESİN BAĞLIDIR
+                // If either reports connected, device is definitely connected
                 if ((inClassic && classicConnected) || (inAep && aepConnected))
                 {
                     return true;
                 }
 
-                // Eğer sistemde bu MAC adresi kayıtlı/eşleşmiş ise ve yukarıda bağlı dönmediyse,
-                // bu donanım kesinlikle bağlı DEĞİLDİR! İsim benzerlikleri bu kesin donanım sonucunu ezemez.
+                // If this MAC is known/paired in the system but neither reports connected,
+                // the hardware is disconnected. Name heuristic must not override hardware truth.
                 if (inClassic || inAep || isKnownPaired)
                 {
                     return false;
                 }
             }
 
-            // 2. Benzersiz DeviceId üzerinden AEP kontrolü
+            // 2. AEP check via unique DeviceId
             if (!string.IsNullOrEmpty(id) && AepConnectedById.TryGetValue(id, out bool idConnected))
             {
                 return idConnected;
             }
 
-            // 3. MAC adresi 0 olan aygıtlar için isim üzerinden MAC çözümleme
+            // 3. Resolve MAC by name for devices reporting MAC 0
             if (mac == 0 && !string.IsNullOrEmpty(cleanName) && !BluetoothDeviceModel.IsGenericName(cleanName))
             {
                 if (MacByName.TryGetValue(cleanName, out ulong resolvedMac) && resolvedMac != 0)
@@ -92,7 +92,7 @@ public static class BluetoothConnectionChecker
                 }
             }
 
-            // 4. Ses aygıtları için Windows CoreAudio aktif MMDevice kontrolü
+            // 4. Active Windows CoreAudio MMDevice check for audio devices
             bool isAudioDevice = type is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker;
             if (isAudioDevice && !string.IsNullOrWhiteSpace(name))
             {
@@ -109,7 +109,7 @@ public static class BluetoothConnectionChecker
                 }
             }
 
-            // 5. Cihaz adı üzerinden canlı durum kontrolü (Sadece generic olmayan ve MAC adresi sistemde olmayan aygıtlar için)
+            // 5. Check live state by device name (for non-generic names with unregistered MAC)
             if (!string.IsNullOrEmpty(cleanName) && !BluetoothDeviceModel.IsGenericName(cleanName))
             {
                 if (ConnectedByName.TryGetValue(cleanName, out bool nameConnected))
@@ -118,7 +118,7 @@ public static class BluetoothConnectionChecker
                 }
             }
 
-            // 6. Sistemde hiçbir yerde aktif bağlantı kanıtı yoksa bağlı değildir
+            // 6. No proof of active connection in the system -> disconnected
             return false;
         }
 
@@ -126,19 +126,19 @@ public static class BluetoothConnectionChecker
         {
             if (model == null) return false;
 
-            // Active BLE advertising beacons kendi canlı süre aşımını yönetir
+            // Active BLE advertising beacons manage their own live timeout
             if (model.IsTws && (model.ProviderSource.Contains("Apple Beacon", StringComparison.OrdinalIgnoreCase) ||
                                model.ProviderSource.Contains("Fast Pair", StringComparison.OrdinalIgnoreCase)))
             {
                 string cleanName = !string.IsNullOrWhiteSpace(model.Name) ? BluetoothDeviceModel.CleanNameForComparison(model.Name) : string.Empty;
 
-                // 1. Önce aktif Windows CoreAudio kontrolü!
+                // 1. Active Windows CoreAudio check first!
                 bool isAudioActive = ActiveAudioNames.Any(a =>
                     a.Contains("AirPods", StringComparison.OrdinalIgnoreCase) ||
                     (!string.IsNullOrEmpty(cleanName) && (a.Contains(cleanName, StringComparison.OrdinalIgnoreCase) || cleanName.Contains(a, StringComparison.OrdinalIgnoreCase))) ||
                     (!string.IsNullOrEmpty(model.Name) && (a.Contains(model.Name, StringComparison.OrdinalIgnoreCase) || model.Name.Contains(a, StringComparison.OrdinalIgnoreCase))));
 
-                // 2. Win32 / WinRT eşleşmiş cihaz bağlantı kontrolü (MacByName üzerinden)
+                // 2. Win32 / WinRT paired device connection check (via MacByName)
                 bool isPairedConnected = false;
                 if (!string.IsNullOrEmpty(cleanName) && MacByName.TryGetValue(cleanName, out ulong resolvedMac) && resolvedMac != 0)
                 {
@@ -150,7 +150,7 @@ public static class BluetoothConnectionChecker
                     }
                 }
 
-                // 3. ConnectedByName kontrolü
+                // 3. Check ConnectedByName
                 if (!isPairedConnected)
                 {
                     foreach (var kvp in ConnectedByName)
@@ -169,7 +169,7 @@ public static class BluetoothConnectionChecker
 
                 if (isAudioActive || isPairedConnected)
                 {
-                    // Aktif ses akışı veya Windows Bluetooth bağlantısı varken kulaklıklar kutuda şarj olamaz
+                    // Earbuds cannot be charging inside case while active audio stream or Windows BT link exists
                     if (model.IsLeftCharging && model.IsRightCharging)
                     {
                         model.IsLeftCharging = false;
@@ -178,7 +178,7 @@ public static class BluetoothConnectionChecker
                     return true;
                 }
 
-                // 4. Eğer aktif ses veya Windows bağlantısı yoksa ve her iki kulaklık da şarj oluyorsa kutudadır
+                // 4. If neither audio nor Windows link is active and both earbuds are charging, they are in the case
                 if (model.IsLeftCharging && model.IsRightCharging)
                 {
                     return false;
@@ -208,7 +208,7 @@ public static class BluetoothConnectionChecker
             var status = TryGetStatus(mac, model.Id, model.Name, model.Type);
             if (status == true) return true;
 
-            // İkincil MAC kontrolü (Dual-mode)
+            // Secondary MAC check (Dual-mode)
             if (model.SecondaryBluetoothAddress != 0)
             {
                 var secStatus = TryGetStatus(model.SecondaryBluetoothAddress, null, model.Name, model.Type);
@@ -220,23 +220,23 @@ public static class BluetoothConnectionChecker
     }
 
     /// <summary>
-    /// Sistem genelindeki tüm Bluetooth ve ses bağlantı durumlarının hızlı bir anlık görüntüsünü alır (< 50ms).
+    /// Takes a fast snapshot of all Bluetooth and audio connection states system-wide (< 50ms).
     /// </summary>
     public static async Task<BluetoothConnectionSnapshot> CaptureSnapshotAsync(IAudioEndpointManager? audioManager = null)
     {
         var snapshot = new BluetoothConnectionSnapshot();
 
-        // 1. Win32 Classic Bluetooth Cihazlarını Tara (bthprops.cpl / BluetoothApis.dll)
+        // 1. Scan Win32 Classic Bluetooth devices (bthprops.cpl / BluetoothApis.dll)
         try
         {
             CaptureWin32ClassicDevices(snapshot);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[BluetoothConnectionChecker] Win32 Bluetooth sorgu hatası: {ex.Message}");
+            Debug.WriteLine($"[BluetoothConnectionChecker] Win32 Bluetooth query error: {ex.Message}");
         }
 
-        // 2. WinRT AssociationEndpoint (Classic ve BLE) Cihazlarını Paralel Tara
+        // 2. Parallel scan WinRT AssociationEndpoint (Classic and BLE) devices
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -255,10 +255,10 @@ public static class BluetoothConnectionChecker
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[BluetoothConnectionChecker] WinRT AEP sorgu hatası: {ex.Message}");
+            Debug.WriteLine($"[BluetoothConnectionChecker] WinRT AEP query error: {ex.Message}");
         }
 
-        // 3. Aktif CoreAudio Çıkışlarını Al
+        // 3. Enumerate active CoreAudio playback endpoints
         try
         {
             var audioMgr = audioManager ?? new AudioEndpointManager();
@@ -267,7 +267,7 @@ public static class BluetoothConnectionChecker
             {
                 if (string.IsNullOrWhiteSpace(ep.Name)) continue;
 
-                // Parantez içi temiz aygıt adını çıkar (örn: "Kulaklıklar (AirPods Pro - Find My)" -> "AirPods Pro - Find My")
+                // Extract clean device name inside parentheses (e.g. "Headphones (AirPods Pro)" -> "AirPods Pro")
                 string inside = ep.Name;
                 int openParen = ep.Name.IndexOf('(');
                 int closeParen = ep.Name.LastIndexOf(')');
@@ -301,7 +301,7 @@ public static class BluetoothConnectionChecker
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[BluetoothConnectionChecker] AudioEndpoint sorgu hatası: {ex.Message}");
+            Debug.WriteLine($"[BluetoothConnectionChecker] AudioEndpoint query error: {ex.Message}");
         }
 
         return snapshot;
@@ -379,7 +379,7 @@ public static class BluetoothConnectionChecker
 
             snapshot.AepConnectedById[dev.Id] = isConnected;
 
-            // MAC adresi çözümleme
+            // Resolve MAC address
             ulong mac = 0;
             if (dev.Properties.TryGetValue(AepDeviceAddressKey, out var addrObj) && addrObj is string addrStr)
             {
@@ -394,7 +394,7 @@ public static class BluetoothConnectionChecker
             if (mac != 0)
             {
                 snapshot.KnownPairedMacs.Add(mac);
-                // Eğer daha önce bağlı olduğu bilinmiyorsa veya yeni değer bağlıysa güncelle
+                // Update if not previously recorded or incoming is connected
                 if (!snapshot.AepConnectedByMac.TryGetValue(mac, out bool existing) || isConnected)
                 {
                     snapshot.AepConnectedByMac[mac] = isConnected;
@@ -426,8 +426,8 @@ public static class BluetoothConnectionChecker
     }
 
     /// <summary>
-    /// Verilen cihazın canlı bağlantı durumunu teyit eder.
-    /// Tek bir doğru kaynak (Single Source of Truth) olarak BluetoothConnectionSnapshot kullanır.
+    /// Verifies live connection state of the specified device.
+    /// Uses BluetoothConnectionSnapshot as a single source of truth.
     /// </summary>
     public static async Task<bool> IsDeviceConnectedAsync(BluetoothDeviceModel model, BluetoothConnectionSnapshot? snapshot = null)
     {
@@ -467,7 +467,7 @@ public static class BluetoothConnectionChecker
     }
 
     /// <summary>
-    /// Bir cihaz listesinin bağlantı durumlarını snapshot üzerinden günceller.
+    /// Updates connection states of a device collection via snapshot.
     /// </summary>
     public static void UpdateConnectionStatuses(IEnumerable<BluetoothDeviceModel> devices, BluetoothConnectionSnapshot snapshot)
     {

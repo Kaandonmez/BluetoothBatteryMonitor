@@ -83,7 +83,7 @@ public partial class SettingsViewModel : ObservableObject
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Bilinen bağlı/eşleşmiş cihazları ekle
+        // 1. Add known connected/paired devices
         if (knownDevices != null)
         {
             foreach (var dev in knownDevices)
@@ -100,7 +100,7 @@ public partial class SettingsViewModel : ObservableObject
                     ? dev.Name
                     : (_settings.DeviceNames.TryGetValue(dev.Id, out var sn) ? sn : dev.Name);
 
-                // Aynı ada sahip cihazları (örn. hem BTHENUM hem BTHLE düğümü olan tek telefon) tekilleştir
+                // Deduplicate devices sharing the same friendly name (e.g., dual BTHENUM and BTHLE nodes)
                 if (!string.IsNullOrWhiteSpace(friendlyName) && !BluetoothDeviceModel.IsGenericName(friendlyName))
                 {
                     if (seenNames.Contains(friendlyName))
@@ -131,7 +131,7 @@ public partial class SettingsViewModel : ObservableObject
             }
         }
 
-        // 2. Ayarlarda önceden kaydedilmiş diğer cihazları ekle
+        // 2. Add other previously saved devices from settings
         foreach (var kvp in _settings.DeviceSpecificThresholds)
         {
             if (seenKeys.Contains(kvp.Key)) continue;
@@ -152,7 +152,7 @@ public partial class SettingsViewModel : ObservableObject
             if (!string.IsNullOrEmpty(macHex)) seenKeys.Add(macHex);
         }
 
-        // 3. Eğer hiç cihaz bulunamadıysa Windows kayıt defterindeki eşleşmiş cihazları tara
+        // 3. If no devices found, scan paired devices in Windows Registry
         if (DeviceThresholds.Count == 0)
         {
             try
@@ -190,7 +190,7 @@ public partial class SettingsViewModel : ObservableObject
             }
             catch
             {
-                // Registry okuma hatasını güvenle yut
+                // Ignore registry read error
             }
         }
 
@@ -276,7 +276,7 @@ public partial class SettingsViewModel : ObservableObject
                     }
                 }
 
-                // Eğer aynı ada sahip başka bağlı cihaz düğümleri varsa (ör. çift modlu telefon) onlara da eşiği uygula
+                // Apply threshold to duplicate nodes sharing the same friendly name
                 if (_knownDevices != null && !string.IsNullOrWhiteSpace(item.Name) && !BluetoothDeviceModel.IsGenericName(item.Name))
                 {
                     foreach (var other in _knownDevices.Where(d => string.Equals(d.Name, item.Name, StringComparison.OrdinalIgnoreCase)))
@@ -327,13 +327,13 @@ public partial class SettingsViewModel : ObservableObject
 
         _settings.Save();
 
-        // Başlangıç ayarını güncelle
+        // Update startup registry configuration
         StartupManager.SetStartup(LaunchAtStartup);
 
-        // Temayı uygula
+        // Apply theme
         ThemeManager.ApplyTheme(SelectedTheme);
 
-        // Dili uygula
+        // Apply language
         LocalizationService.ApplyLanguage(SelectedLanguage);
     }
 

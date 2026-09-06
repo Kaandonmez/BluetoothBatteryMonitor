@@ -43,14 +43,14 @@ public static class TaskbarPositionHelper
         }
         else
         {
-            // SHAppBarMessage başarısız olursa WorkArea üzerinden tespit et
+            // Fallback to WorkArea if SHAppBarMessage fails
             if (workArea.Top > 0) edge = TaskbarEdge.Top;
             else if (workArea.Left > 0) edge = TaskbarEdge.Left;
             else if (workArea.Right < screenWidth) edge = TaskbarEdge.Right;
             else edge = TaskbarEdge.Bottom;
         }
 
-        // Görev çubuğu sınırlarını tamamen WPF DIP (Device Independent Pixels) cinsinden hesapla
+        // Calculate taskbar bounds in WPF Device Independent Pixels (DIPs)
         Rect bounds = edge switch
         {
             TaskbarEdge.Top => new Rect(0, 0, screenWidth, Math.Max(0, workArea.Top)),
@@ -63,8 +63,8 @@ public static class TaskbarPositionHelper
     }
 
     /// <summary>
-    /// Flyout penceresinin görev çubuğunun yanına yerleşeceği sol-üst DIP koordinatlarını hesaplar.
-    /// Tüm hesaplamalar WPF DIP birimindedir ve ekran ölçekleme (DPI scaling) ile tam uyumludur.
+    /// Calculates the top-left DIP coordinates where the flyout window will dock alongside the taskbar.
+    /// Fully compliant with multi-monitor layouts and high-DPI scaling.
     /// </summary>
     public static Point CalculateFlyoutPosition(double windowWidth, double windowHeight, double margin = 12)
     {
@@ -98,7 +98,7 @@ public static class TaskbarPositionHelper
                 break;
         }
 
-        // Ekran sınırlarının dışına taşmasını engelle
+        // Constrain within screen work area boundaries
         left = Math.Max(workArea.Left + margin, Math.Min(left, workArea.Right - windowWidth - margin));
         top = Math.Max(workArea.Top + margin, Math.Min(top, workArea.Bottom - windowHeight - margin));
 

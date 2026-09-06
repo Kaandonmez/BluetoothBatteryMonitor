@@ -37,7 +37,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. Standart PnP Logitech aygıtlarını tara
+            // 1. Scan standard PnP Logitech devices
             string aqs = $"(System.Devices.DeviceInstanceId:~~\"{LogitechVendorId}\")";
             var props = new[]
             {
@@ -62,7 +62,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                         battery = b;
                 }
 
-                string name = !string.IsNullOrWhiteSpace(dev.Name) ? dev.Name : "Logitech Cihazı";
+                string name = !string.IsNullOrWhiteSpace(dev.Name) ? dev.Name : "Logitech Device";
                 bool isConnected = false;
                 if (dev.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var aepVal) && aepVal is bool ac)
                 {
@@ -88,7 +88,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 }
             }
 
-            // 2. Win32 HID API üzerinden HID++ 2.0 (özellikle Bluetooth klavyeler ör. K380) sorgusu
+            // 2. Query HID++ 2.0 via Win32 HID API (especially Bluetooth keyboards like K380)
             string hidSelector = $"System.Devices.InterfaceClassGuid:=\"{HidInterfaceGuid}\"";
             var hidDevices = await DeviceInformation.FindAllAsync(hidSelector).AsTask(cancellationToken);
 
@@ -103,7 +103,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
             {
                 if (cancellationToken.IsCancellationRequested) break;
 
-                // Daha önce eklenmiş mi kontrol et
+                // Check if already added
                 if (list.Any(x => x.Id == dev.Id || (!string.IsNullOrEmpty(x.Name) && x.Name.Equals(CleanLogitechName(dev.Name), StringComparison.OrdinalIgnoreCase))))
                 {
                     continue;
@@ -112,7 +112,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 var batInfo = await QueryLogitechHidBatteryAsync(dev.Id, cancellationToken);
                 if (batInfo != null)
                 {
-                    string devName = !string.IsNullOrWhiteSpace(dev.Name) ? dev.Name : "Logitech Cihazı";
+                    string devName = !string.IsNullOrWhiteSpace(dev.Name) ? dev.Name : "Logitech Device";
                     var model = new BluetoothDeviceModel
                     {
                         Id = dev.Id,
@@ -132,14 +132,14 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Tarama hatası
+            // Scan error
         }
 
         return list;
     }
 
     /// <summary>
-    /// Win32 HID API'si ile HID++ 2.0 cihazından (K380 vb.) pil raporunu sorgular.
+    /// Queries battery report from HID++ 2.0 device (K380 etc.) via Win32 HID API.
     /// </summary>
     private static async Task<LogitechBatteryInfo?> QueryLogitechHidBatteryAsync(string devicePath, CancellationToken cancellationToken)
     {
@@ -156,14 +156,14 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
 
             if (handle.IsInvalid) return null;
 
-            // 1. Önce PreparsedData ve Caps ile Collection'ın uygunluğunu kontrol et
+            // 1. Verify collection capability via PreparsedData and Caps
             if (NativeMethods.HidD_GetPreparsedData(handle, out var pData))
             {
                 bool isTargetCollection = false;
                 int status = NativeMethods.HidP_GetCaps(pData, out var caps);
                 if (status >= 0 || (uint)status == 0x00110000)
                 {
-                    // Logitech satıcı kanalı (UsagePage 0xFF00, Usage 0x0002) veya 20-byte Output Report
+                    // Logitech vendor channel (UsagePage 0xFF00, Usage 0x0002) or 20-byte Output Report
                     if ((caps.UsagePage == 0xFF00 && (caps.Usage == 0x0002 || caps.Usage == 0x0001)) ||
                         caps.OutputReportByteLength >= 20 || caps.InputReportByteLength >= 20)
                     {
@@ -178,10 +178,10 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 }
             }
 
-            // Dosya akışını tek bir oturum boyunca açık tut (handle erken dispose edilmesin)
+            // Keep file stream open for session duration (prevent early handle disposal)
             using var fs = new FileStream(handle, FileAccess.ReadWrite, 20, isAsync: true);
 
-            // 2. Root Feature (0x0000) üzerinden Feature 0x1000 (Battery Level Status) veya 0x1004 indeksini keşfet
+            // 2. Discover Feature 0x1000 (Battery Level Status) or 0x1004 index via Root Feature (0x0000)
             byte[] rootReq = new byte[20];
             rootReq[0] = 0x11; // HID++ Long Report ID
             rootReq[1] = 0xFF; // Direct Bluetooth Device index
@@ -205,7 +205,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 }
             }
 
-            // 0x1000 bulunamazsa Feature 0x1004 (Unified Battery) dene
+            // If 0x1000 is not found, try Feature 0x1004 (Unified Battery)
             if (featureIndex == 0)
             {
                 rootReq[4] = 0x10;
@@ -224,13 +224,13 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 }
             }
 
-            // Batarya özelliği desteklenmiyorsa bu aygıtta pil yoktur (ör. kablolu fare/klavye)
+            // If battery feature is not supported, device has no battery (e.g. wired mouse/keyboard)
             if (featureIndex == 0)
             {
                 return null;
             }
 
-            // 3. Keşfedilen FeatureIndex üzerinden pil sorgusunu gönder
+            // 3. Query battery telemetry via discovered FeatureIndex
             byte[] batReq = new byte[20];
             batReq[0] = 0x11;
             batReq[1] = 0xFF;
@@ -244,7 +244,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
 
                 byte[] batResp = new byte[20];
                 int read = await fs.ReadAsync(batResp, 0, 20, ctsBat.Token);
-                // batResp[2] hata (0x8F) olmamalı, featureIndex ile eşleşmelidir
+                // batResp[2] must match featureIndex without error (0x8F)
                 if (read >= 6 && batResp[2] == featureIndex && TryParseLogitechBatteryReport(batResp, out var info))
                 {
                     return info;
@@ -253,15 +253,15 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Cihaz erişim istisnası
+            // Device access error
         }
 
         return null;
     }
 
     /// <summary>
-    /// HID++ 1.0 / 2.0 yanıt baytlarını çözümler.
-    /// Feature 0x1000 (Battery Status) ve 0x1004 (Unified Battery) desteklenir.
+    /// Decodes HID++ 1.0 / 2.0 response bytes.
+    /// Feature 0x1000 (Battery Status) and 0x1004 (Unified Battery) are supported.
     /// </summary>
     public static bool TryParseLogitechBatteryReport(byte[] report, out LogitechBatteryInfo? info)
     {
@@ -276,10 +276,10 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
         // HID++ Long Report (0x11)
         if (reportId == 0x11 && report.Length >= 7)
         {
-            // HID++ 2.0 Feature 0x1000 (Battery Status) formatı:
-            // report[4]: Deşarj / pil yüzdesi (0-100)
-            // report[5]: Bir sonraki seviye eşiği
-            // report[6]: Şarj durumu (0=Deşarj, 1=Şarj oluyor, 2=Tam dolu)
+            // HID++ 2.0 Feature 0x1000 (Battery Status) format:
+            // report[4]: Discharging / battery percentage (0-100)
+            // report[5]: Next level threshold
+            // report[6]: Charging status (0=Discharging, 1=Charging, 2=Full)
             byte percentage = report[4];
             if (percentage <= 100)
             {
@@ -287,16 +287,16 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 bool isCharging = chargeStatus == 1 || chargeStatus == 2;
                 string statusDesc = chargeStatus switch
                 {
-                    1 => "Şarj Ediliyor",
-                    2 => "Tam Dolu",
-                    _ => "Pilde"
+                    1 => "Charging",
+                    2 => "Full",
+                    _ => "Discharging"
                 };
 
                 info = new LogitechBatteryInfo(percentage, isCharging, statusDesc);
                 return true;
             }
 
-            // HID++ 2.0 Feature 0x1004 (Unified Battery) alternatifi:
+            // HID++ 2.0 Feature 0x1004 (Unified Battery) fallback:
             // report[4]: level (0-100), report[5]: status (0=Discharging, 1=Charging, 2=Full)
             byte uPercentage = report[4];
             byte uStatus = report[5];
@@ -305,9 +305,9 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                 bool isCharging = uStatus == 1;
                 string statusDesc = uStatus switch
                 {
-                    1 => "Şarj Ediliyor",
-                    2 => "Tam Dolu",
-                    _ => "Pilde"
+                    1 => "Charging",
+                    2 => "Full",
+                    _ => "Discharging"
                 };
 
                 info = new LogitechBatteryInfo(uPercentage, isCharging, statusDesc);
@@ -367,7 +367,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
                         {
                             Id = update.Id,
                             BatteryLevel = b,
-                            ProviderSource = "Logitech HID++ (Canlı)",
+                            ProviderSource = "Logitech HID++ (Live)",
                             LastUpdated = DateTime.Now
                         };
                         DeviceUpdated?.Invoke(this, model);
@@ -378,7 +378,7 @@ public class LogitechHidBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Watcher başlatılamazsa periyodik sorgu devam eder
+            // Periodic polling continues if watcher cannot be started
         }
     }
 

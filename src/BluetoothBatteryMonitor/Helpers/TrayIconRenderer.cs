@@ -10,8 +10,8 @@ using System.Windows.Media.Imaging;
 namespace BluetoothBatteryMonitor.Helpers;
 
 /// <summary>
-/// Sistem tepsisi için dinamik pil ikonları çizen ve üreten yardımcı sınıf.
-/// En düşük pil yüzdesine göre renk kodları (Yeşil: %40+, Sarı: %20-%39, Kırmızı: <%20) uygular.
+/// Helper class for rendering and generating dynamic battery icons for the system tray.
+/// Applies color coding based on lowest battery percentage (Green: 40%+, Yellow: 20%-39%, Red: &lt;20%).
 /// </summary>
 public static class TrayIconRenderer
 {
@@ -24,7 +24,7 @@ public static class TrayIconRenderer
     private static extern bool DestroyIcon(IntPtr handle);
 
     /// <summary>
-    /// Pil yüzdesi ve şarj durumuna göre 32x32 dinamik System.Drawing.Icon oluşturur.
+    /// Creates a 32x32 dynamic System.Drawing.Icon based on battery level and charging state.
     /// </summary>
     public static Icon CreateTrayIcon(int? batteryLevel, bool isCharging = false)
     {
@@ -42,7 +42,7 @@ public static class TrayIconRenderer
     }
 
     /// <summary>
-    /// WPF H.NotifyIcon IconSource için BitmapSource üretir.
+    /// Generates a BitmapSource for WPF H.NotifyIcon IconSource.
     /// </summary>
     public static BitmapSource CreateTrayBitmapSource(int? batteryLevel, bool isCharging = false)
     {
@@ -54,7 +54,7 @@ public static class TrayIconRenderer
     }
 
     /// <summary>
-    /// Dinamik tepsisi görselini 32x32 veya 64x64 çöznürlükte çizer.
+    /// Draws dynamic tray image in 32x32 or 64x64 resolution.
     /// </summary>
     public static Bitmap RenderBitmap(int? batteryLevel, bool isCharging, int size = 32)
     {
@@ -81,8 +81,8 @@ public static class TrayIconRenderer
             _ => ColorRed
         };
 
-        // Modern pil gövdesi ve doluluk çubuğu
-        // 1. Pil Dış Çerçevesi (Yuvarlatılmış dikdörtgen)
+        // Modern battery body and fill level bar
+        // 1. Battery Outer Frame (Rounded rectangle)
         float padding = size * 0.08f;
         float batWidth = size - (padding * 2);
         float batHeight = size * 0.44f;
@@ -92,18 +92,18 @@ public static class TrayIconRenderer
         using (var bgBrush = new SolidBrush(System.Drawing.Color.FromArgb(40, 255, 255, 255)))
         using (var borderPen = new Pen(System.Drawing.Color.FromArgb(200, 255, 255, 255), 1.5f))
         {
-            // Pil gövdesi
+            // Battery body
             g.FillRectangle(bgBrush, batX, batY, batWidth - 3, batHeight);
             g.DrawRectangle(borderPen, batX, batY, batWidth - 3, batHeight);
 
-            // Pil Kutbu (Nipple)
+            // Battery Terminal (Nipple)
             float nippleWidth = 2.5f;
             float nippleHeight = batHeight * 0.45f;
             float nippleY = batY + (batHeight - nippleHeight) / 2f;
             g.FillRectangle(new SolidBrush(System.Drawing.Color.White), batX + batWidth - 3, nippleY, nippleWidth, nippleHeight);
         }
 
-        // 2. Pil İçi Doluluk (Renk kodlu: Yeşil, Sarı, Kırmızı)
+        // 2. Battery Interior Fill (Color coded: Green, Yellow, Red)
         float innerPadding = 2f;
         float maxFillWidth = (batWidth - 3) - (innerPadding * 2);
         float fillWidth = level > 0 ? Math.Max(2f, (maxFillWidth * level) / 100f) : 0f;
@@ -115,7 +115,7 @@ public static class TrayIconRenderer
             g.FillRectangle(fillBrush, batX + innerPadding, batY + innerPadding, fillWidth, fillHeight);
         }
 
-        // 3. Yüzde Metni (Üst kısma şık, okunaklı yazı)
+        // 3. Percentage Text (Crisp, legible text on upper part)
         string text = isCharging ? $"⚡{level}" : $"{level}";
         float fontSize = size >= 32 ? (level == 100 ? 9.0f : (isCharging ? 9.5f : 11.0f)) : 8f;
         using var font = new Font("Segoe UI", fontSize, System.Drawing.FontStyle.Bold, GraphicsUnit.Pixel);
@@ -132,7 +132,7 @@ public static class TrayIconRenderer
 
     private static void DrawBluetoothSymbol(Graphics g, int size)
     {
-        // Bluetooth ikonu çizimi
+        // Draw Bluetooth symbol
         float cx = size / 2f;
         float cy = size / 2f;
         float h = size * 0.7f;
@@ -146,10 +146,10 @@ public static class TrayIconRenderer
             LineJoin = LineJoin.Round
         };
 
-        // Dikey orta hat
+        // Vertical center line
         g.DrawLine(pen, cx, cy - halfH, cx, cy + halfH);
 
-        // Çapraz çizgiler
+        // Diagonal lines
         g.DrawLine(pen, cx - w, cy - halfH * 0.5f, cx + w, cy + halfH * 0.5f);
         g.DrawLine(pen, cx + w, cy + halfH * 0.5f, cx, cy + halfH);
         g.DrawLine(pen, cx, cy - halfH, cx + w, cy - halfH * 0.5f);

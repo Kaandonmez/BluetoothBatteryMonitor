@@ -37,13 +37,13 @@ public class DeviceSpecificThresholdTests
         settings.DeviceSpecificThresholds["DEV_MOUSE"] = 10;
         settings.DeviceSpecificThresholds["001122334455"] = 15;
 
-        // Tanımlı cihaz
+        // Defined device
         Assert.Equal(10, settings.GetEffectiveLowBatteryThreshold("DEV_MOUSE"));
 
-        // Tanımlı MAC
+        // Defined MAC
         Assert.Equal(15, settings.GetEffectiveLowBatteryThreshold("ANY_ID", 0x001122334455));
 
-        // Tanımsız cihaz -> Global eşik (20)
+        // Undefined device -> Global threshold (20)
         Assert.Equal(20, settings.GetEffectiveLowBatteryThreshold("DEV_UNKNOWN"));
     }
 
@@ -57,7 +57,7 @@ public class DeviceSpecificThresholdTests
         Assert.True(settings.HasCustomThreshold(devId));
         Assert.Equal(25, settings.GetEffectiveLowBatteryThreshold(devId));
 
-        // 0 veya null verildiğinde kaldırılmalı
+        // Should be removed when 0 or null is passed
         settings.SetDeviceThreshold(devId, 0);
         Assert.False(settings.HasCustomThreshold(devId));
         Assert.Equal(settings.LowBatteryThreshold, settings.GetEffectiveLowBatteryThreshold(devId));
@@ -70,9 +70,9 @@ public class DeviceSpecificThresholdTests
         var settings = new AppSettings
         {
             EnableNotifications = true,
-            LowBatteryThreshold = 20 // Global eşik %20
+            LowBatteryThreshold = 20 // Global threshold 20%
         };
-        // Fare için özel eşik: %10
+        // Custom threshold for mouse: 10%
         settings.DeviceSpecificThresholds["DEV_MOUSE"] = 10;
 
         var mouse = new AppDevice
@@ -80,13 +80,13 @@ public class DeviceSpecificThresholdTests
             Id = "DEV_MOUSE",
             Name = "Logitech MX Master 3",
             Type = AppDeviceType.Mouse,
-            BatteryLevel = 15, // Global eşiğin altında ama fare eşiğinin (%10) üstünde
+            BatteryLevel = 15, // Below global threshold but above mouse threshold (10%)
             IsConnected = true
         };
 
         service.CheckAndNotifyBattery(mouse, settings);
 
-        // Bildirim tetiklenmemeli
+        // Notification should not trigger
         Assert.Empty(service.SentNotifications);
     }
 
@@ -98,7 +98,7 @@ public class DeviceSpecificThresholdTests
         {
             EnableNotifications = true,
             LowBatteryThreshold = 20
-            // CriticalBatteryThreshold varsayılan 10 olarak kalmalıdır
+            // CriticalBatteryThreshold should remain default 10
         };
         settings.DeviceSpecificThresholds["DEV_MOUSE"] = 10;
 
@@ -126,9 +126,9 @@ public class DeviceSpecificThresholdTests
         var settings = new AppSettings
         {
             EnableNotifications = true,
-            LowBatteryThreshold = 20 // Global %20
+            LowBatteryThreshold = 20 // Global 20%
         };
-        // Kulaklık için özel eşik: %25
+        // Custom threshold for headphones: 25%
         settings.DeviceSpecificThresholds["DEV_HEADPHONES"] = 25;
 
         var headphones = new AppDevice
@@ -136,7 +136,7 @@ public class DeviceSpecificThresholdTests
             Id = "DEV_HEADPHONES",
             Name = "Sony WH-1000XM4",
             Type = AppDeviceType.Headphones,
-            BatteryLevel = 22, // Global %20'nin üstünde ama özel %25 eşiğinin altında!
+            BatteryLevel = 22, // Above global 20% but below custom 25% threshold!
             IsConnected = true
         };
 
@@ -188,10 +188,10 @@ public class DeviceSpecificThresholdTests
         Assert.Equal("LDAC", vm.AudioCodec);
         Assert.True(vm.HasAudioCodec);
 
-        // Varsayılan durumda özel eşik yok
+        // No custom threshold by default
         Assert.False(vm.HasCustomThreshold);
 
-        // %15 olarak ayarla
+        // Set to 15%
         vm.SetThresholdCommand.Execute(15);
 
         Assert.True(vm.HasCustomThreshold);
@@ -200,7 +200,7 @@ public class DeviceSpecificThresholdTests
         Assert.Contains("15%", vm.ThresholdDisplayText);
         Assert.Contains("15%", vm.CustomThresholdBadgeText);
 
-        // Varsayılana geri al (0 veya null)
+        // Reset to default (0 or null)
         vm.SetThresholdCommand.Execute(0);
         Assert.False(vm.HasCustomThreshold);
         Assert.Null(vm.CustomThreshold);
@@ -224,7 +224,7 @@ public class DeviceSpecificThresholdTests
             Id = "DEV_MOUSE",
             Name = "Logitech MX Master 3",
             Type = AppDeviceType.Mouse,
-            BatteryLevel = 5, // %5 seviyesi kritik olmalı
+            BatteryLevel = 5, // 5% level should be critical
             IsConnected = true
         };
 
@@ -250,24 +250,24 @@ public class DeviceSpecificThresholdTests
 
         var vm = new AppDeviceItemViewModel(device, null);
 
-        // Başlangıç: varsayılan seçili
+        // Initial: default selected
         Assert.True(vm.IsThresholdDefault);
         Assert.False(vm.IsThreshold10);
         Assert.False(vm.IsThreshold25);
 
-        // %10 seç
+        // Select 10%
         vm.SetThresholdCommand.Execute(10);
         Assert.False(vm.IsThresholdDefault);
         Assert.True(vm.IsThreshold10);
         Assert.False(vm.IsThreshold25);
 
-        // %25 seç
+        // Select 25%
         vm.SetThresholdCommand.Execute(25);
         Assert.False(vm.IsThresholdDefault);
         Assert.False(vm.IsThreshold10);
         Assert.True(vm.IsThreshold25);
 
-        // Varsayılana dön
+        // Revert to default
         vm.SetThresholdCommand.Execute(0);
         Assert.True(vm.IsThresholdDefault);
         Assert.False(vm.IsThreshold10);
@@ -303,7 +303,7 @@ public class DeviceSpecificThresholdTests
         var mouseItem = vm.DeviceThresholds.FirstOrDefault(d => d.Name == "Logitech MX Master 3");
         Assert.NotNull(mouseItem);
         Assert.Equal("BTHENUM\\DEV_1", mouseItem.Id);
-        Assert.Equal(0, mouseItem.SelectedThreshold); // Varsayılan
+        Assert.Equal(0, mouseItem.SelectedThreshold); // Default
 
         var sonyItem = vm.DeviceThresholds.FirstOrDefault(d => d.Name == "Sony WH-1000XM4");
         Assert.NotNull(sonyItem);

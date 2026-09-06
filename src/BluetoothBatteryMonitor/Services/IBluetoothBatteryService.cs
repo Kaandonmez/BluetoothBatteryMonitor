@@ -7,37 +7,37 @@ using BluetoothBatteryMonitor.Models;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Bluetooth pil izleme servisleri için ortak arayüz.
+/// Common interface for Bluetooth battery monitoring services.
 /// </summary>
 public interface IBluetoothBatteryService
 {
     /// <summary>
-    /// Bir cihazın pil veya bağlantı durumu güncellendiğinde tetiklenir.
+    /// Triggered when a device's battery or connection status is updated.
     /// </summary>
     event EventHandler<BluetoothDeviceModel>? DeviceUpdated;
 
     /// <summary>
-    /// Bir cihaz sistemden kaldırıldığında tetiklenir.
+    /// Triggered when a device is removed from the system.
     /// </summary>
     event EventHandler<string>? DeviceRemoved;
 
     /// <summary>
-    /// Şu anda takip edilen tüm cihazların listesi.
+    /// List of all currently monitored devices.
     /// </summary>
     IReadOnlyCollection<BluetoothDeviceModel> Devices { get; }
 
     /// <summary>
-    /// Pil izleme motorunu arka planda başlatır.
+    /// Starts the battery monitoring engine in the background.
     /// </summary>
     Task StartMonitoringAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Pil izleme motorunu durdurur ve kaynakları serbest bırakır.
+    /// Stops the battery monitoring engine and releases resources.
     /// </summary>
     Task StopMonitoringAsync();
 
     /// <summary>
-    /// Tüm sağlayıcıları zorla sorgulayarak cihaz listesini anlık yeniler.
+    /// Forcefully queries all providers to instantly refresh the device list.
     /// </summary>
     Task RefreshDevicesAsync();
 }

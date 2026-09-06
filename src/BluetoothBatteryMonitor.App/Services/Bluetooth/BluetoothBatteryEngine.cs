@@ -49,7 +49,7 @@ public class BluetoothBatteryEngine : IDisposable
         _codecDetector = codecDetector ?? BluetoothAudioCodecDetector.Default;
         _audioManager = audioManager ?? new AudioEndpointManager();
 
-        // Sağlayıcıları kaydet
+        // Register providers
         _providers.Add(new BleGattBatteryProvider());
         _providers.Add(new AppleAirPodsBeaconProvider());
         _providers.Add(new WindowsPnpBatteryProvider());
@@ -67,7 +67,7 @@ public class BluetoothBatteryEngine : IDisposable
             provider.DeviceUpdated += OnProviderDeviceUpdated;
         }
 
-        // Windows oturum kilitlenme / açılma olaylarını dinle (Enerji tasarrufu)
+        // Listen to Windows session lock / unlock events (Power saving)
         SystemEvents.SessionSwitch += OnSessionSwitch;
     }
 
@@ -78,25 +78,25 @@ public class BluetoothBatteryEngine : IDisposable
             provider.StartMonitoring();
         }
 
-        // İlk taramayı başlat
+        // Start initial scan
         _ = RefreshAllDevicesAsync();
 
-        // Akıllı zamanlayıcıyı kur
+        // Setup smart polling timer
         ScheduleNextPoll(TimeSpan.FromSeconds(10));
     }
 
     public async Task RefreshAllDevicesAsync()
     {
         if (_isSessionLocked || _isDisposed) return;
-        if (!await _scanLock.WaitAsync(100)) return; // Çakışan taramaları engelle
+        if (!await _scanLock.WaitAsync(100)) return; // Prevent concurrent scans
 
         try
         {
-            StatusChanged?.Invoke(this, "Bluetooth cihazları taranıyor...");
+            StatusChanged?.Invoke(this, "Scanning Bluetooth devices...");
 
             var connectionSnapshot = await BluetoothConnectionChecker.CaptureSnapshotAsync(_audioManager);
 
-            // Mevcut önbellekteki cihazların bağlantı durumunu hemen canlı anlık görüntü ile güncelle
+            // Update connection state of cached devices with live snapshot
             BluetoothConnectionChecker.UpdateConnectionStatuses(_devices.Values, connectionSnapshot);
 
             var scanTasks = _providers.Select(async p =>
@@ -117,7 +117,7 @@ public class BluetoothBatteryEngine : IDisposable
 
             foreach (var devList in results)
             {
-                // Sağlayıcıdan gelen cihazların durumunu da derhal snapshot ile doğrula
+                // Validate provider devices with live snapshot
                 BluetoothConnectionChecker.UpdateConnectionStatuses(devList, connectionSnapshot);
 
                 foreach (var dev in devList)
@@ -126,12 +126,12 @@ public class BluetoothBatteryEngine : IDisposable
                 }
             }
 
-            // Bağlantısı kopmuş / kapağı kapatılmış beacon veya eski cihazların durumunu güncelle
+            // Update stale devices or closed-lid beacons
             var now = DateTime.Now;
             foreach (var kvp in _devices)
             {
-                // Apple AirPods / Beats ve Google Fast Pair beacon'ları kutu kapandığında yayın yapmayı keser.
-                // Yalnızca bağlı OLMAYAN beacon'lar için: 30 saniye boyunca yeni paket gelmediyse cihazı ekrandan düşür.
+                // Apple AirPods / Beats and Google Fast Pair beacons stop advertising when case is closed.
+                // For disconnected beacons only: purge device if no advertisement received for 30 seconds.
                 if (!kvp.Value.IsConnected && kvp.Value.IsTws && (kvp.Value.ProviderSource.Contains("Apple Beacon") || kvp.Value.ProviderSource.Contains("Fast Pair")))
                 {
                     if (now - kvp.Value.LastUpdated > TimeSpan.FromSeconds(30))
@@ -145,13 +145,13 @@ public class BluetoothBatteryEngine : IDisposable
                 }
             }
 
-            // Çift modlu (Classic + BLE GATT) cihazları kümele
+            // Aggregate dual-mode (Classic + BLE GATT) devices
             AggregateDualModeDevices();
 
-            // Tüm cihazların canlı bağlantı durumunu kesinleştir
+            // Finalize live connection status of all devices
             BluetoothConnectionChecker.UpdateConnectionStatuses(_devices.Values, connectionSnapshot);
 
-            // Kodek tespiti ve bildirim kontrolünü SADECE kesin teyit edilmiş cihazlar üzerinde yap
+            // Run codec detection and notification checks ONLY on confirmed connected devices
             foreach (var activeDev in CurrentDevices)
             {
                 if (activeDev.IsConnected && (activeDev.Type is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker))
@@ -161,18 +161,18 @@ public class BluetoothBatteryEngine : IDisposable
                 _notificationService.CheckAndNotifyBattery(activeDev, settings);
             }
 
-            StatusChanged?.Invoke(this, $"{_devices.Count} cihaz bulundu.");
+            StatusChanged?.Invoke(this, $"{_devices.Count} device(s) found.");
             NotifyDevicesUpdated();
         }
         finally
         {
             _scanLock.Release();
 
-            // Bir sonraki yoklamayı akıllıca planla
+            // Schedule next poll intelligently
             int interval = AppSettings.Load().RefreshIntervalSeconds;
             if (_devices.IsEmpty)
             {
-                interval = Math.Max(interval, 300); // Cihaz yokken 5 dakika
+                interval = Math.Max(interval, 300); // 5 minutes when no devices are paired
             }
             ScheduleNextPoll(TimeSpan.FromSeconds(interval));
         }
@@ -180,7 +180,7 @@ public class BluetoothBatteryEngine : IDisposable
 
     private async void OnProviderDeviceUpdated(object? sender, BluetoothDeviceModel dev)
     {
-        // Gelen canlı olayın gerçek bağlantı durumunu doğrula
+        // Verify live connection status of incoming event
         dev.IsConnected = await BluetoothConnectionChecker.IsDeviceConnectedAsync(dev);
 
         var activeDev = MergeOrAddDevice(dev);
@@ -231,7 +231,7 @@ public class BluetoothBatteryEngine : IDisposable
             }
         }
 
-        // İkincil geçiş: Çapraz / geçişli (transitive) eşleşmeleri birleştirerek tam tekillik garantisi sağla
+        // Secondary pass: Merge transitive matches to guarantee complete uniqueness
         bool mergedAny;
         do
         {
@@ -288,29 +288,29 @@ public class BluetoothBatteryEngine : IDisposable
         bool candidateIsAudio = candidate.DeviceType is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker;
         bool currentIsAudio = current.DeviceType is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker;
 
-        // 1. Ses aygıtı (Headphones/Earbuds/Speaker) ses yönlendirme ve kodek için her zaman genel düğüme tercih edilir
+        // 1. Audio device (Headphones/Earbuds/Speaker) is preferred over generic node for audio routing and codec detection
         if (candidateIsAudio && !currentIsAudio) return true;
         if (!candidateIsAudio && currentIsAudio) return false;
 
-        // 2. Cihaz tipi önceliği (Örn: Phone, Gamepad > Generic)
+        // 2. Device type priority (e.g. Phone, Gamepad > Generic)
         int candPriority = GetDeviceTypePriority(candidate.DeviceType);
         int currPriority = GetDeviceTypePriority(current.DeviceType);
         if (candPriority > currPriority) return true;
         if (candPriority < currPriority) return false;
 
-        // 3. Windows Audio Endpoint uyumu için Klasik BTHENUM düğümü BLE düğümüne tercih edilir
+        // 3. Prefer Classic BTHENUM node over BLE node for Windows Audio Endpoint compatibility
         bool candidateIsBtEnum = (candidate.Id ?? string.Empty).Contains("BTHENUM", StringComparison.OrdinalIgnoreCase);
         bool currentIsBtEnum = (current.Id ?? string.Empty).Contains("BTHENUM", StringComparison.OrdinalIgnoreCase);
         if (candidateIsBtEnum && !currentIsBtEnum) return true;
         if (!candidateIsBtEnum && currentIsBtEnum) return false;
 
-        // 4. Model adı zenginliği
+        // 4. Model name richness
         bool candidateHasModel = !string.IsNullOrWhiteSpace(candidate.ModelName);
         bool currentHasModel = !string.IsNullOrWhiteSpace(current.ModelName);
         if (candidateHasModel && !currentHasModel) return true;
         if (!candidateHasModel && currentHasModel) return false;
 
-        // 5. İsim temizliği (LE prefix'i olmayan temiz isim tercih edilir)
+        // 5. Clean display name (prefer names without LE prefix/suffix)
         bool candidateHasLe = candidate.Name.StartsWith("LE_", StringComparison.OrdinalIgnoreCase) ||
                               candidate.Name.StartsWith("LE-", StringComparison.OrdinalIgnoreCase) ||
                               candidate.Name.StartsWith("LE ", StringComparison.OrdinalIgnoreCase) ||
@@ -362,7 +362,7 @@ public class BluetoothBatteryEngine : IDisposable
                            master.Name.EndsWith("-LE", StringComparison.OrdinalIgnoreCase) ||
                            master.Name.EndsWith("_LE", StringComparison.OrdinalIgnoreCase);
 
-        // İsim önceliği: Özel veya daha detaylı adı koru (Teknik LE prefixlerini temiz ada tercih etme)
+        // Name priority: Preserve custom or detailed name (do not prefer technical LE prefix over clean name)
         if (!BluetoothDeviceModel.IsGenericName(secondary.Name))
         {
             if (BluetoothDeviceModel.IsGenericName(master.Name))
@@ -384,13 +384,13 @@ public class BluetoothBatteryEngine : IDisposable
             master.ModelName = secondary.ModelName;
         }
 
-        // Cihaz türü: Genel türü daha spesifik türle güncelle
+        // Device type: Upgrade generic type to more specific device type
         if (GetDeviceTypePriority(secondary.DeviceType) > GetDeviceTypePriority(master.DeviceType))
         {
             master.DeviceType = secondary.DeviceType;
         }
 
-        // MAC adresi aktarımı (Dual-mode BR/EDR ve BLE adreslerini koru)
+        // MAC address propagation (preserve dual-mode BR/EDR and BLE addresses)
         if (master.BluetoothAddress == 0 && secondary.BluetoothAddress != 0)
         {
             master.BluetoothAddress = secondary.BluetoothAddress;
@@ -413,8 +413,8 @@ public class BluetoothBatteryEngine : IDisposable
             master.SecondaryBluetoothAddress = secondary.SecondaryBluetoothAddress;
         }
 
-        // Pil verileri:
-        // 1. TWS cihazı ise (Sol, Sağ, Kutu) parçalarını eksiksiz aktar
+        // Battery telemetry:
+        // 1. For TWS devices: transfer all component levels (Left, Right, Case)
         if (secondary.IsTws)
         {
             master.IsTws = true;
@@ -429,8 +429,8 @@ public class BluetoothBatteryEngine : IDisposable
         }
         else
         {
-            // 2. Standart pil seviyesi:
-            // BLE GATT veya PnP BLE yüksek çözünürlüklü (%1 adım) verisi, kaba (%10 dilimli) Klasik HFP verisine her zaman önceliklidir!
+            // 2. Standard battery level:
+            // High-resolution (1% step) BLE GATT/PnP data always takes precedence over coarse (10% step) Classic HFP data!
             bool masterIsHfp = IsHfpSource(master);
             bool secondaryIsHfp = IsHfpSource(secondary);
 
@@ -443,20 +443,20 @@ public class BluetoothBatteryEngine : IDisposable
                 }
                 else if (masterIsHfp && !secondaryIsHfp)
                 {
-                    // BLE GATT veya PnP BLE verisi HFP'ye önceliklidir
+                    // BLE GATT or PnP BLE data takes precedence over HFP
                     master.BatteryLevel = secondary.BatteryLevel;
                     master.IsCharging = secondary.IsCharging;
                 }
                 else if (!masterIsHfp && secondaryIsHfp)
                 {
-                    // Master zaten yüksek çözünürlüklü veriye sahip; kaba HFP ile ezme!
+                    // Master already holds high-resolution telemetry; do not overwrite with coarse HFP data!
                     master.IsCharging = master.IsCharging || secondary.IsCharging;
                 }
                 else
                 {
-                    // İkisi de aynı sınıfta (ikisi de HFP veya ikisi de BLE/PnP):
-                    // Yeni bir telemetri geldiyse (secondary.LastUpdated > master.LastUpdated), daima güncelle!
-                    // Eşzamanlı/başlangıç taramasında (aynı zaman damgası) ise yüksek çözünürlüklü olan (%1 hassasiyet, 10'un tam katı olmayan) tercih edilir.
+                    // Both are in the same class (both HFP or both BLE/PnP):
+                    // If newer telemetry arrived (secondary.LastUpdated > master.LastUpdated), always update!
+                    // In simultaneous/startup scans, prefer high-resolution (1% step, non-multiple of 10) values.
                     bool masterIsStep10 = master.BatteryLevel.Value % 10 == 0;
                     bool secondaryIsStep10 = secondary.BatteryLevel.Value % 10 == 0;
 
@@ -478,10 +478,10 @@ public class BluetoothBatteryEngine : IDisposable
             }
         }
 
-        // Bağlantı durumu: Herhangi biri bağlıysa birleşik cihaz bağlıdır
+        // Connection status: device is connected if either node is connected
         master.IsConnected = master.IsConnected || secondary.IsConnected;
 
-        // Ses kodeki aktarımı (Yüksek kaliteli veya tespit edilmiş spesifik kodeki önceliklendir)
+        // Audio codec propagation (prioritize detected high-resolution codec)
         if (!string.IsNullOrEmpty(secondary.AudioCodec))
         {
             if (string.IsNullOrEmpty(master.AudioCodec) || (master.AudioCodec == "SBC" && secondary.AudioCodec != "SBC"))
@@ -494,11 +494,11 @@ public class BluetoothBatteryEngine : IDisposable
             secondary.AudioCodec = master.AudioCodec;
         }
 
-        // Çift modlu kümelendiğini işaretle
+        // Mark dual-mode aggregated
         master.IsAggregated = true;
         secondary.IsAggregated = true;
 
-        // Sağlayıcı kaynağını şık bir şekilde birleştir (örn: "Windows PnP / BLE GATT")
+        // Nicely merge provider sources (e.g. "Windows PnP / BLE GATT")
         master.ProviderSource = MergeProviderSources(master.ProviderSource, secondary.ProviderSource);
         master.LastUpdated = master.LastUpdated > secondary.LastUpdated ? master.LastUpdated : secondary.LastUpdated;
     }
@@ -519,19 +519,19 @@ public class BluetoothBatteryEngine : IDisposable
 
     public static string MergeProviderSources(string? source1, string? source2)
     {
-        if (string.IsNullOrWhiteSpace(source1) || source1.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase))
-            return source2 ?? "Bilinmiyor";
-        if (string.IsNullOrWhiteSpace(source2) || source2.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(source1) || source1.Equals("Unknown", StringComparison.OrdinalIgnoreCase) || source1.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase))
+            return source2 ?? "Unknown";
+        if (string.IsNullOrWhiteSpace(source2) || source2.Equals("Unknown", StringComparison.OrdinalIgnoreCase) || source2.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase))
             return source1;
 
         var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void AddFrom(string src)
         {
-            var raw = src.Split(new[] { " + ", " / ", " • ", " (Canlı)" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var raw = src.Split(new[] { " + ", " / ", " • ", " (Live)", " (Canlı)" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             foreach (var r in raw)
             {
-                if (string.IsNullOrWhiteSpace(r) || r.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.IsNullOrWhiteSpace(r) || r.Equals("Unknown", StringComparison.OrdinalIgnoreCase) || r.Equals("Bilinmiyor", StringComparison.OrdinalIgnoreCase)) continue;
                 tokens.Add(r);
             }
         }
@@ -589,7 +589,7 @@ public class BluetoothBatteryEngine : IDisposable
                 return newDev;
             }
 
-            // Aynı düğüm için doğrudan güncelleme (bağlantı durumu güncel değeri almalıdır)
+            // Direct in-place update for identical node ID (connection status receives fresh value)
             if (string.Equals(target.Id, newDev.Id, StringComparison.OrdinalIgnoreCase))
             {
                 target.IsConnected = newDev.IsConnected;
@@ -620,14 +620,13 @@ public class BluetoothBatteryEngine : IDisposable
                 MergeDualModePair(master, secondary);
             }
 
-            // Eğer yeni gelen olay önbellekteki cihazdan daha güncelse (canlı kopma veya bağlanma olayı),
-            // birleşik cihazın bağlantı durumunu güncel olayın durumuna eşitle
+            // If incoming live event is newer than cached device (disconnect or connect event), update connection state
             if (newDev.LastUpdated > (master == newDev ? secondary.LastUpdated : master.LastUpdated))
             {
                 master.IsConnected = newDev.IsConnected;
             }
 
-            // Mükerrer olabilecek diğer kayıtları temizle ve birleştir
+            // Clean up and merge any remaining duplicate candidates
             var duplicateKeys = _devices.Where(kvp => kvp.Value != master &&
                 (kvp.Value.Matches(master) || kvp.Value.Id.Equals(master.Id, StringComparison.OrdinalIgnoreCase)))
                 .Select(kvp => kvp.Key).ToList();
@@ -664,13 +663,13 @@ public class BluetoothBatteryEngine : IDisposable
     {
         if (e.Reason == SessionSwitchReason.SessionLock)
         {
-            // Ekran kilitlendi: Yoklamayı durdur, pil tasarrufu sağla
+            // Screen locked: Pause polling to save battery
             _isSessionLocked = true;
             _pollingTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         }
         else if (e.Reason == SessionSwitchReason.SessionUnlock)
         {
-            // Oturum açıldı: Yoklamayı hemen yeniden başlat
+            // Session unlocked: Resume polling immediately
             _isSessionLocked = false;
             _ = RefreshAllDevicesAsync();
         }

@@ -72,7 +72,7 @@ public class AudioEndpointManager : IAudioEndpointManager
                     }
                     catch
                     {
-                        // Tekil cihaz okuma hatasını yut
+                        // Ignore single device query error
                     }
                     finally
                     {
@@ -86,7 +86,7 @@ public class AudioEndpointManager : IAudioEndpointManager
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[AudioEndpointManager] GetPlaybackEndpoints hatası: {ex.Message}");
+            Debug.WriteLine($"[AudioEndpointManager] GetPlaybackEndpoints error: {ex.Message}");
         }
 
         return list;
@@ -112,7 +112,7 @@ public class AudioEndpointManager : IAudioEndpointManager
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[AudioEndpointManager] GetDefaultPlaybackDeviceId hatası: {ex.Message}");
+            Debug.WriteLine($"[AudioEndpointManager] GetDefaultPlaybackDeviceId error: {ex.Message}");
         }
 
         return null;
@@ -122,7 +122,7 @@ public class AudioEndpointManager : IAudioEndpointManager
     {
         if (string.IsNullOrWhiteSpace(deviceId)) return false;
 
-        // 1. Windows 10/11 CPolicyConfigClient dene
+        // 1. Try Windows 10/11 CPolicyConfigClient
         try
         {
             var policyConfig = new CPolicyConfigClient() as IPolicyConfig;
@@ -137,10 +137,10 @@ public class AudioEndpointManager : IAudioEndpointManager
         }
         catch
         {
-            // Vista fallback'e geç
+            // Fall back to Vista PolicyConfig
         }
 
-        // 2. Windows Vista/7/8 PolicyConfig dene
+        // 2. Try Windows Vista/7/8 PolicyConfig
         try
         {
             var type = Type.GetTypeFromCLSID(CLSID_PolicyConfigVista);
@@ -296,7 +296,7 @@ public class AudioEndpointManager : IAudioEndpointManager
 
         string cleanDevName = BluetoothDeviceModel.CleanNameForComparison(device.Name);
 
-        // 1. MAC adresi eşleşmesi (DeviceInstanceId, Id veya Description içinde)
+        // 1. MAC address match (inside DeviceInstanceId, Id or Description)
         if (device.BluetoothAddress != 0)
         {
             string macHex = device.BluetoothAddress.ToString("X12");
@@ -318,7 +318,7 @@ public class AudioEndpointManager : IAudioEndpointManager
             if (macMatch != null) return macMatch;
         }
 
-        // 2. Temizlenmiş ad tam veya parantez içi eşleşmesi (örn: "Kulaklıklar (AirPods Pro - Find My)" -> "AirPods Pro")
+        // 2. Cleaned name exact or parenthesized match (e.g., "Headphones (AirPods Pro - Find My)" -> "AirPods Pro")
         var exactMatch = endpoints.FirstOrDefault(e =>
         {
             string cleanEp = BluetoothDeviceModel.CleanNameForComparison(e.Name);
@@ -339,7 +339,7 @@ public class AudioEndpointManager : IAudioEndpointManager
         });
         if (exactMatch != null) return exactMatch;
 
-        // 3. İsim içerme eşleşmesi
+        // 3. Name substring containment match
         if (!string.IsNullOrEmpty(cleanDevName) && cleanDevName.Length >= 3)
         {
             var containsMatch = endpoints.FirstOrDefault(e =>
@@ -351,7 +351,7 @@ public class AudioEndpointManager : IAudioEndpointManager
             if (containsMatch != null) return containsMatch;
         }
 
-        // 4. ModelName eşleşmesi
+        // 4. ModelName match
         if (!string.IsNullOrEmpty(device.ModelName) && device.ModelName.Length >= 3)
         {
             string cleanModel = BluetoothDeviceModel.CleanNameForComparison(device.ModelName);
@@ -364,7 +364,7 @@ public class AudioEndpointManager : IAudioEndpointManager
             if (modelMatch != null) return modelMatch;
         }
 
-        // 5. Kelime bazlı benzerlik (Örn: "Sony WH-1000XM4" -> "WH-1000XM4")
+        // 5. Word-based token similarity (e.g., "Sony WH-1000XM4" -> "WH-1000XM4")
         var words = cleanDevName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                                 .Where(w => w.Length >= 3 && !BluetoothDeviceModel.IsGenericName(w))
                                 .ToList();
@@ -397,7 +397,7 @@ public class AudioEndpointManager : IAudioEndpointManager
         }
         catch
         {
-            // COM aktivasyon hatasını yut
+            // Ignore COM activation error
         }
         return null;
     }
@@ -422,7 +422,7 @@ public class AudioEndpointManager : IAudioEndpointManager
         }
         catch
         {
-            // COM mülk okuma hatasını yut
+            // Ignore COM property read error
         }
         return null;
     }
@@ -443,7 +443,7 @@ public class AudioEndpointManager : IAudioEndpointManager
 
     public void Dispose()
     {
-        // Gerekirse global kaynakları temizle
+        // Clean up global COM resources if needed
     }
 
     #region COM P/Invoke & Interfaces

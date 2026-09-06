@@ -6,8 +6,8 @@ using Microsoft.Win32;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Uygulamanın Windows açılışında otomatik başlatılmasını yönetir (HKCU\...\Run).
-/// Yönetici yetkisi gerektirmeden geçerli kullanıcı profiline güvenle yazar.
+/// Manages automatic launching of the application at Windows startup (HKCU\...\Run).
+/// Safely writes to the current user profile without requiring administrator privileges.
 /// </summary>
 public static class StartupManager
 {
@@ -15,7 +15,7 @@ public static class StartupManager
     private const string AppName = "BluetoothBatteryMonitor";
 
     /// <summary>
-    /// Uygulamanın çalıştırılabilir tam dosya yolunu alır.
+    /// Gets the full executable file path of the application.
     /// </summary>
     public static string GetExecutablePath()
     {
@@ -35,7 +35,7 @@ public static class StartupManager
     }
 
     /// <summary>
-    /// Uygulamanın başlangıçta çalışacak şekilde kayıtlı olup olmadığını denetler.
+    /// Checks whether the application is registered to run at startup.
     /// </summary>
     public static bool IsRunAtStartup()
     {
@@ -55,7 +55,7 @@ public static class StartupManager
     }
 
     /// <summary>
-    /// Başlangıçta çalıştırma durumunu açar veya kapatır.
+    /// Enables or disables running at startup.
     /// </summary>
     public static bool SetRunAtStartup(bool enable)
     {

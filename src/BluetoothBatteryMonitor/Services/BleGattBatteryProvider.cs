@@ -14,8 +14,8 @@ using Windows.Storage.Streams;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Standart Bluetooth Low Energy (BLE) GATT Pil Servisini (0x180F) dinleyen sağlayıcı.
-/// Characteristic 0x2A19 üzerinden anlık okuma ve Notify aboneliği yaparak %0 CPU ile canlı güncellenir.
+/// Provider listening to the standard Bluetooth Low Energy (BLE) GATT Battery Service (0x180F).
+/// Reads instantly and subscribes to Notify via Characteristic 0x2A19 for live updates with 0% CPU.
 /// </summary>
 public class BleGattBatteryProvider
 {
@@ -47,7 +47,7 @@ public class BleGattBatteryProvider
     {
         try
         {
-            // GATT Battery Service barındıran veya eşleştirilmiş BLE cihazları sorgula
+            // Query BLE devices hosting GATT Battery Service or paired
             string selector = GattDeviceService.GetDeviceSelectorFromUuid(BatteryServiceUuid);
             var serviceDevices = await DeviceInformation.FindAllAsync(selector);
 
@@ -56,7 +56,7 @@ public class BleGattBatteryProvider
                 await ConnectAndReadServiceAsync(devInfo.Id);
             }
 
-            // Ayrıca eşleşmiş tüm BLE cihazlarında pil servisini tara
+            // Also scan battery service on all paired BLE devices
             string pairedBleSelector = BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
             var pairedDevices = await DeviceInformation.FindAllAsync(pairedBleSelector);
 
@@ -127,7 +127,7 @@ public class BleGattBatteryProvider
 
         var characteristic = charResult.Characteristics[0];
 
-        // Mevcut pil değerini anlık oku
+        // Read current battery value immediately
         var readResult = await characteristic.ReadValueAsync(BluetoothCacheMode.Uncached);
         int? batteryLevel = null;
         if (readResult.Status == GattCommunicationStatus.Success && readResult.Value != null && readResult.Value.Length > 0)
@@ -157,7 +157,7 @@ public class BleGattBatteryProvider
         }
         model.LastSeen = DateTime.Now;
 
-        // Canlı değişiklik bildirimlerine abone ol (Notify)
+        // Subscribe to live change notifications (Notify)
         if (!_subscribedCharacteristics.ContainsKey(deviceId))
         {
             try

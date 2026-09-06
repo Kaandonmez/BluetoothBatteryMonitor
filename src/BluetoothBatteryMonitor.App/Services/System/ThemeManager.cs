@@ -45,7 +45,7 @@ public static class ThemeManager
             // Fallback
         }
 
-        return true; // Varsayılan Koyu Tema
+        return true; // Default to Dark Theme
     }
 
     public static void ApplyTheme(string themePreference)
@@ -63,7 +63,7 @@ public static class ThemeManager
         }
         catch
         {
-            // UI thread dışındaysa veya henüz pencere yoksa yutulabilir
+            // Suppress if outside UI thread or window is not loaded yet
         }
 
         ThemeChanged?.Invoke(null, isDark);

@@ -16,8 +16,8 @@ using BluetoothBatteryMonitor.Views;
 namespace BluetoothBatteryMonitor;
 
 /// <summary>
-/// Uygulama giriş noktası ve sistem tepsisi (System Tray) yaşam döngüsü yöneticisi.
-/// Tek örnek (Single Instance Mutex), dinamik tepsi simgesi ve sağ tık bağlam menüsünü yönetir.
+/// Application entry point and System Tray lifecycle manager.
+/// Manages single instance (Single Instance Mutex), dynamic tray icon, and right-click context menu.
 /// </summary>
 public partial class App : Application
 {
@@ -38,7 +38,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // 1. Tek Örnek Koruması (Single Instance Mutex - Standart kullanıcılar için Local namespace)
+        // 1. Single Instance Protection (Single Instance Mutex - Local namespace for standard users)
         bool isFirstInstance;
         try
         {
@@ -51,7 +51,7 @@ public partial class App : Application
 
         if (!isFirstInstance)
         {
-            // İkinci kopya açıldıysa ilk kopyaya Flyout'u öne getirme sinyali ver ve kapan
+            // If a second instance is opened, signal the first instance to bring Flyout to front and exit
             try
             {
                 using var existingEvent = EventWaitHandle.OpenExisting(ShowEventName);
@@ -63,7 +63,7 @@ public partial class App : Application
             return;
         }
 
-        // İlk kopya için sinyal dinleyici oluştur
+        // Create signal listener for the first instance
         try
         {
             _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
@@ -72,18 +72,18 @@ public partial class App : Application
         }
         catch { }
 
-        // 2. Servislerin ve ViewModel'in Başlatılması
+        // 2. Initialize Services and ViewModel
         _batteryService = new BluetoothBatteryAggregatorService();
         _viewModel = new MainFlyoutViewModel(_batteryService);
         _flyoutWindow = new FlyoutWindow(_viewModel);
 
-        // 3. Dinamik Sistem Tepsisi Simgesinin (TaskbarIcon) Kurulması
+        // 3. Setup Dynamic System Tray Icon (TaskbarIcon)
         InitializeTaskbarIcon();
 
-        // 4. Pil Değişikliklerinde Tepsi İkonu Güncelleme Dinleyicisi
+        // 4. Tray Icon Update Listener on Battery Changes
         _viewModel.TrayIconUpdateRequested += OnTrayIconUpdateRequested;
 
-        // 5. Arka Plan Bluetooth İzleme Motorunu Başlat
+        // 5. Start Background Bluetooth Monitoring Engine
         try
         {
             await _batteryService.StartMonitoringAsync();
@@ -103,7 +103,7 @@ public partial class App : Application
             Icon = TrayIconRenderer.CreateTrayIcon(null, false)
         };
 
-        // Sol Tık: Modern Flyout penceresini aç/kapat
+        // Left Click: Toggle modern Flyout window visibility
         _taskbarIcon.TrayLeftMouseDown += async (_, _) =>
         {
             if (_flyoutWindow != null)
@@ -112,7 +112,7 @@ public partial class App : Application
             }
         };
 
-        // Çift Tık: Doğrudan Flyout aç
+        // Double Click: Directly open Flyout
         _taskbarIcon.TrayMouseDoubleClick += async (_, _) =>
         {
             if (_flyoutWindow != null)
@@ -121,7 +121,7 @@ public partial class App : Application
             }
         };
 
-        // Sağ Tık: Pratik Bağlam Menüsü
+        // Right Click: Practical Context Menu
         var contextMenu = new ContextMenu();
 
         var openItem = new MenuItem { Header = "Aç" };
@@ -183,12 +183,12 @@ public partial class App : Application
 
             try
             {
-                // Dinamik ikon oluştur
+                // Create dynamic icon
                 var oldIcon = _taskbarIcon.Icon;
                 _taskbarIcon.Icon = TrayIconRenderer.CreateTrayIcon(lowestBattery, isCharging);
                 oldIcon?.Dispose();
 
-                // Detaylı araç ipucu (Tooltip) güncelle
+                // Update detailed tooltip
                 var sb = new StringBuilder();
                 sb.AppendLine("Bluetooth Pil Monitörü");
 
@@ -208,7 +208,7 @@ public partial class App : Application
                 }
 
                 string tip = sb.ToString().TrimEnd();
-                // Windows bildirim alanı tooltip uzunluk sınırını aşmamak için kırp
+                // Truncate to avoid exceeding Windows notification area tooltip length limit
                 if (tip.Length > 127)
                 {
                     tip = tip[..124] + "...";
@@ -216,7 +216,7 @@ public partial class App : Application
 
                 _taskbarIcon.ToolTipText = tip;
 
-                // Başlangıç durumu menüsünü senkronize tut
+                // Keep startup state menu synchronized
                 if (_startupMenuItem != null)
                 {
                     _startupMenuItem.IsChecked = StartupManager.IsRunAtStartup();

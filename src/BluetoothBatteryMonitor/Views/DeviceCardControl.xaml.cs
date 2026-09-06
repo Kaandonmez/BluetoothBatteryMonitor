@@ -3,7 +3,7 @@ using System.Windows.Controls;
 namespace BluetoothBatteryMonitor.Views;
 
 /// <summary>
-/// Cihaz kartı görünümü için arka plan kodu.
+/// Code-behind for device card view.
 /// </summary>
 public partial class DeviceCardControl : UserControl
 {

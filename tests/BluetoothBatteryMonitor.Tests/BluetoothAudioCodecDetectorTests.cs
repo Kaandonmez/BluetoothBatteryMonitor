@@ -114,7 +114,7 @@ public class BluetoothAudioCodecDetectorTests
     [Fact]
     public void DetectCodec_WhenAppleAirPodsOnLegacyWindows10_FallsBackToSbc()
     {
-        var detector = new AppCodecDetector(osBuildNumber: 18362); // Windows 10 1903 (öncesi AAC desteklemez)
+        var detector = new AppCodecDetector(osBuildNumber: 18362); // Windows 10 1903 (prior versions do not support AAC)
         var airPods = new AppDevice
         {
             Id = "DEV_AIRPODS",
@@ -229,7 +229,7 @@ public class BluetoothAudioCodecDetectorTests
         {
             Id = "DEV_GENERIC_HEADSET",
             Name = "Soundcore Space Q45",
-            Type = AppDeviceType.Generic, // Henüz Type atanmamış olsa bile adı ses cihazı
+            Type = AppDeviceType.Generic, // Even if Type is not assigned yet, the name is an audio device
             IsConnected = true
         };
 

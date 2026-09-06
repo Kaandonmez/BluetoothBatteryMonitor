@@ -22,8 +22,8 @@ public record FastPairBatteryInfo(
     bool IsTws);
 
 /// <summary>
-/// Google Fast Pair standardını kullanan Android uyumlu kulaklıklar (Pixel Buds, JBL, Nothing Ear, OnePlus vb.) için
-/// 0xFE2C BLE Advertisement Service Data paketlerini dinleyip pil seviyelerini ve şarj durumlarını çözen sağlayıcı.
+/// Provider for Google Fast Pair compliant devices (Pixel Buds, JBL, Nothing Ear, OnePlus, etc.)
+/// that parses 0xFE2C BLE Advertisement Service Data packets to extract battery levels and charging states.
 /// </summary>
 public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
 {
@@ -50,7 +50,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
             ScanningMode = BluetoothLEScanningMode.Active
         };
 
-        // 0xFE2C Service UUID filtresi ekle
+        // Filter by 0xFE2C Service UUID
         _watcher.AdvertisementFilter.Advertisement.ServiceUuids.Add(FastPairServiceUuid);
         _watcher.Received += OnAdvertisementReceived;
     }
@@ -80,7 +80,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Bluetooth radyosu kapalı olabilir
+            // Bluetooth radio might be turned off
         }
     }
 
@@ -101,7 +101,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
         {
             var ad = args.Advertisement;
 
-            // Service Data ve Manufacturer Data içindeki 0xFE2C verilerini ara
+            // Search for 0xFE2C in Service Data and Manufacturer Data
             foreach (var section in ad.DataSections)
             {
                 // DataType 0x16 = Service Data (16-bit UUID)
@@ -110,11 +110,11 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
                     byte[] rawData = section.Data.ToArray();
                     if (rawData.Length < 3) continue;
 
-                    // İlk 2 bayt Service UUID (0x2C, 0xFE - Little Endian)
+                    // First 2 bytes: Service UUID (0x2C, 0xFE - Little Endian)
                     ushort uuid = (ushort)(rawData[0] | (rawData[1] << 8));
                     if (uuid != FastPairServiceShortUuid) continue;
 
-                    // Geri kalan yük Fast Pair batarya bildirim verisidir
+                    // Remaining payload is Fast Pair battery telemetry data
                     byte[] payload = rawData.Skip(2).ToArray();
                     if (TryParseFastPairAdvertisement(payload, out var info) && info != null)
                     {
@@ -127,7 +127,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // Paket okuma hatası
+            // Suppress packet parsing error
         }
     }
 
@@ -136,7 +136,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
         string macString = address.ToString("X12");
         string formattedMac = string.Join(":", Enumerable.Range(0, 6).Select(i => macString.Substring(i * 2, 2)));
 
-        string name = !string.IsNullOrWhiteSpace(localName) ? localName : "Google Fast Pair Cihazı";
+        string name = !string.IsNullOrWhiteSpace(localName) ? localName : "Google Fast Pair Device";
         var devType = info.IsTws ? DeviceType.Earbuds : DeviceType.Headphones;
 
         var model = new BluetoothDeviceModel
@@ -173,9 +173,9 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// Google Fast Pair Service Data yükünü ayrıştırır.
-    /// Bit 7 (0x80): Şarj durumu (1 = şarjda, 0 = deşarj).
-    /// Bit 0-6 (0x7F): Pil seviyesi (0-100). 0x7F (127) = Bağlantısız / Bilinmiyor.
+    /// Parses Google Fast Pair Service Data payload.
+    /// Bit 7 (0x80): Charging flag (1 = charging, 0 = discharging).
+    /// Bit 0-6 (0x7F): Battery level (0-100). 0x7F (127) = Disconnected / Unknown.
     /// </summary>
     public static bool TryParseFastPairAdvertisement(byte[] serviceData, out FastPairBatteryInfo? info)
     {
@@ -185,34 +185,34 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
             return false;
         }
 
-        // 1. Format: 3-bayt TWS (Sol, Sağ, Kutu)
+        // 1. Format: 3-byte TWS (Left, Right, Case)
         if (serviceData.Length == 3)
         {
             return TryParseTwsComponents(serviceData[0], serviceData[1], serviceData[2], out info);
         }
 
-        // 2. Format: 4-bayt TWS (Başlık baytı + Sol, Sağ, Kutu)
+        // 2. Format: 4-byte TWS (Header byte + Left, Right, Case)
         if (serviceData.Length == 4)
         {
             return TryParseTwsComponents(serviceData[1], serviceData[2], serviceData[3], out info);
         }
 
-        // 3. Format: 1-bayt Tekli Kulaklık
+        // 3. Format: 1-byte Single Headset
         if (serviceData.Length == 1)
         {
             return TryParseSingleComponent(serviceData[0], out info);
         }
 
-        // 4. Format: 2-bayt Tekli Kulaklık (Başlık baytı + Pil)
+        // 4. Format: 2-byte Single Headset (Header byte + Battery)
         if (serviceData.Length == 2)
         {
             return TryParseSingleComponent(serviceData[1], out info);
         }
 
-        // 5. Uzun formatlar (Örn: Model ID sonrasında 3 bayt batarya verisi)
+        // 5. Extended formats (e.g. Model ID followed by 3 bytes battery data)
         if (serviceData.Length >= 5)
         {
-            // Son 3 baytı TWS batarya adayı olarak dene
+            // Try last 3 bytes as TWS battery candidates
             int start = serviceData.Length - 3;
             if (TryParseTwsComponents(serviceData[start], serviceData[start + 1], serviceData[start + 2], out info))
             {
@@ -279,7 +279,7 @@ public class GoogleFastPairBatteryProvider : IBluetoothBatteryProvider
         isCharging = (raw & 0x80) != 0;
         int level = raw & 0x7F;
 
-        // 0x7F (127) = Bağlantısız / Mevcut değil
+        // 0x7F (127) = Disconnected / Not Available
         if (level is 0x7F or > 100)
         {
             return null;

@@ -24,9 +24,9 @@ public record SamsungBudsBatteryInfo(
     string? ModelName = null);
 
 /// <summary>
-/// Samsung Galaxy Buds, Buds+, Buds Live, Buds Pro, Buds2 ve Buds FE serisi kulaklıklar için
-/// RFCOMM SPP (Serial Port Profile) kanalı üzerinden 0xFD başlangıç baytlı durum paketlerini ayrıştıran,
-/// Sol, Sağ ve Kutu pilleri ile şarj durumlarını bağımsız raporlayan sağlayıcı.
+/// Battery provider for Samsung Galaxy Buds series (Buds, Buds+, Buds Live, Buds Pro, Buds2, Buds FE).
+/// Parses 0xFD-prefixed status frames over RFCOMM SPP (Serial Port Profile) to report Left, Right,
+/// and Case battery levels along with independent charging statuses.
 /// </summary>
 public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
 {
@@ -56,7 +56,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. Eşleşmiş Samsung Buds cihazlarını sistemde ara
+            // 1. Discover paired Samsung Buds devices in system
             string selector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
             var deviceInfos = await DeviceInformation.FindAllAsync(selector).AsTask(cancellationToken);
 
@@ -66,7 +66,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
             {
                 if (cancellationToken.IsCancellationRequested) break;
 
-                // Önce önbellekte SPP ile taranmış zengin TWS modeli var mı kontrol et
+                // Check cache for existing rich TWS model scanned via SPP
                 if (_devices.TryGetValue(info.Id, out var cached) && cached.IsTws)
                 {
                     var live = await TryQueryRfcommBatteryAsync(info.Id, cancellationToken);
@@ -83,7 +83,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
                     continue;
                 }
 
-                // Cihazı oluştur
+                // Create device model
                 string modelName = DetectBudsModelName(info.Name);
                 ulong mac = BluetoothDeviceModel.ExtractMacAddress(info.Id);
 
@@ -100,14 +100,14 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
                     LastUpdated = DateTime.Now
                 };
 
-                // PnP üzerinden temel batarya fallback'i al
+                // Fallback to basic battery level via PnP
                 if (info.Properties.TryGetValue(PnpBatteryKey, out var pnpVal) && pnpVal != null &&
                     int.TryParse(pnpVal.ToString(), out int bLevel))
                 {
                     devModel.BatteryLevel = bLevel;
                 }
 
-                // RFCOMM üzerinden anlık canlı durum paketini sorgulamayı dene
+                // Attempt to query real-time status packet over RFCOMM
                 var liveBattery = await TryQueryRfcommBatteryAsync(info.Id, cancellationToken);
                 if (liveBattery != null)
                 {
@@ -121,7 +121,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // İstisnayı yakala
+            // Ignore transient scan exception
         }
 
         return resultList;
@@ -132,7 +132,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(1500); // Bluetooth bağlantısı için kısa süre
+            cts.CancelAfter(1500); // Short timeout for Bluetooth socket connection
 
             using var bluetoothDevice = await BluetoothDevice.FromIdAsync(deviceId).AsTask(cts.Token);
             if (bluetoothDevice == null) return null;
@@ -150,7 +150,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
 
             if (rfcommServices.Services.Count == 0)
             {
-                // Standart SPP UUID yerine cihazın sağladığı tüm RFCOMM servislerini sorgula
+                // Query all available RFCOMM services on device if standard SPP UUID is not found
                 rfcommServices = await bluetoothDevice.GetRfcommServicesAsync(BluetoothCacheMode.Uncached).AsTask(cts.Token);
             }
 
@@ -160,7 +160,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
             using var socket = new StreamSocket();
             await socket.ConnectAsync(service.ConnectionHostName, service.ConnectionServiceName).AsTask(cts.Token);
 
-            // Buds durum sorgu isteği paketi gönder: 0xFD 0x00 0x00 0x60 (SOM + Length + MsgId)
+            // Send Buds status request packet: 0xFD 0x00 0x00 0x60 (SOM + Length + MsgId)
             using var writer = new DataWriter(socket.OutputStream);
             byte[] req = [SomByte, 0x00, 0x00, MsgIdExtendedStatus];
             writer.WriteBytes(req);
@@ -186,7 +186,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // RFCOMM bağlantı veya okuma hatası
+            // RFCOMM connection or read error
         }
 
         return null;
@@ -231,7 +231,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Sessizce geç
+                // Silently ignore transient errors
             }
 
             try
@@ -246,8 +246,8 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// Samsung Galaxy Buds 0xFD başlangıç baytlı RFCOMM SPP paketini ayrıştırır.
-    /// Extended Status (0x60), Basic Status (0x61) veya Battery Status (0x62) formatlarını çözer.
+    /// Parses Samsung Galaxy Buds 0xFD-prefixed RFCOMM SPP status packets.
+    /// Decodes Extended Status (0x60), Basic Status (0x61), or Battery Status (0x62) formats.
     /// </summary>
     public static bool TryParseGalaxyBudsPacket(byte[] packet, out SamsungBudsBatteryInfo? info)
     {
@@ -257,7 +257,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
             return false;
         }
 
-        // Paket başlangıç baytını kontrol et (0xFD)
+        // Search for Start of Message (SOM) byte (0xFD)
         int somIndex = -1;
         for (int i = 0; i < packet.Length - 6; i++)
         {
@@ -275,7 +275,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         if (remaining < 7) return false;
 
         // Byte 0: 0xFD
-        // Byte 1-2: Uzunluk (little-endian)
+        // Byte 1-2: Length (little-endian)
         // Byte 3: MsgId
         byte msgId = packet[offset + 3];
 
@@ -290,11 +290,11 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         {
             // 0x60: MSG_ID_EXTENDED_STATUS_UPDATED
             // offset + 4: Revision / Model info
-            // offset + 5: Sol kulaklık pili (0 - 100)
-            // offset + 6: Sağ kulaklık pili (0 - 100)
+            // offset + 5: Left earbud battery (0 - 100)
+            // offset + 6: Right earbud battery (0 - 100)
             // offset + 7: Coupled / Wearing state
-            // offset + 8: Kutu pili (0 - 100)
-            // offset + 9: Şarj bitleri (bit 0: sol, bit 1: sağ, bit 2: kutu)
+            // offset + 8: Case battery (0 - 100)
+            // offset + 9: Charging bits (bit 0: left, bit 1: right, bit 2: case)
             byte rawLeft = packet[offset + 5];
             byte rawRight = packet[offset + 6];
             byte rawCase = packet[offset + 8];
@@ -337,7 +337,7 @@ public class SamsungGalaxyBudsBatteryProvider : IBluetoothBatteryProvider
         }
         else
         {
-            // Genel Buds yük taraması: 0-100 aralığındaki pil değerlerini güvenle ara
+            // Generic Buds payload scan: safely look for valid battery values (0-100)
             if (remaining >= 9)
             {
                 byte b1 = packet[offset + 4];

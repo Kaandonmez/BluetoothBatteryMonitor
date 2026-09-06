@@ -8,14 +8,14 @@ namespace BluetoothBatteryMonitor.App.Helpers;
 public static class TrayIconGenerator
 {
     /// <summary>
-    /// Verilen pil seviyesi ve şarj durumuna göre dinamik sistem tepsisi ikonu (Icon) üretir.
+    /// Generates dynamic system tray icon based on battery level and charging state.
     /// </summary>
-    /// <param name="batteryLevel">0-100 arası pil seviyesi, null ise bağlı cihaz yok</param>
-    /// <param name="isCharging">Cihaz şarj oluyor mu</param>
-    /// <param name="isDarkTheme">Kullanılan sistem teması koyu mu</param>
+    /// <param name="batteryLevel">Battery percentage between 0-100, or null if no device is connected</param>
+    /// <param name="isCharging">Whether device is charging</param>
+    /// <param name="isDarkTheme">Whether system is in dark mode</param>
     public static Icon GenerateTrayIcon(int? batteryLevel, bool isCharging = false, bool isDarkTheme = true)
     {
-        const int size = 32; // 32x32 yüksek DPI netliği sağlar
+        const int size = 32; // 32x32 provides crisp rendering on high-DPI displays
         using var bitmap = new Bitmap(size, size);
         using (var g = Graphics.FromImage(bitmap))
         {
@@ -30,7 +30,7 @@ public static class TrayIconGenerator
 
             if (!batteryLevel.HasValue)
             {
-                // Bağlı cihaz yok simgesi: Soluk gri pil gövdesi ve ortada çizgi
+                // Disconnected state: Dim muted outline and horizontal dash
                 Color inactiveColor = Color.FromArgb(120, outlineColor);
                 using var inactivePen = new Pen(inactiveColor, 2f);
                 g.DrawRoundedRectangle(inactivePen, new RectangleF(4, 8, 22, 16), 3);
@@ -43,41 +43,41 @@ public static class TrayIconGenerator
 
                 if (isCharging)
                 {
-                    fillColor = Color.FromArgb(0, 164, 239); // Şarj için parlak mavi / siyan
+                    fillColor = Color.FromArgb(0, 164, 239); // Vibrant cyan/blue for charging
                 }
                 else if (level >= 40)
                 {
-                    fillColor = Color.FromArgb(16, 185, 129); // Modern Fluent Yeşil
+                    fillColor = Color.FromArgb(16, 185, 129); // Modern Fluent Emerald Green
                 }
                 else if (level >= 20)
                 {
-                    fillColor = Color.FromArgb(245, 158, 11); // Modern Kehribar/Turuncu
+                    fillColor = Color.FromArgb(245, 158, 11); // Modern Amber/Orange warning
                 }
                 else
                 {
-                    fillColor = Color.FromArgb(239, 68, 68); // Modern Kırmızı
+                    fillColor = Color.FromArgb(239, 68, 68); // Modern Critical Red
                 }
 
-                // 1. Pil Dış Gövdesi
+                // 1. Battery Outer Shell
                 using var bodyPen = new Pen(outlineColor, 2f);
                 var bodyRect = new RectangleF(2, 6, 24, 20);
                 g.DrawRoundedRectangle(bodyPen, bodyRect, 4);
 
-                // 2. Pil Kutbu (Terminal ucu)
+                // 2. Battery Positive Terminal Cap
                 using var terminalBrush = new SolidBrush(outlineColor);
                 g.FillRoundedRectangle(terminalBrush, new RectangleF(26, 12, 3, 8), 1);
 
-                // 3. Pil İç Doluluğu (Yatay dolum)
+                // 3. Battery Fill Level (Horizontal fill)
                 float maxInnerWidth = 20f;
                 float innerWidth = Math.Max(2f, (maxInnerWidth * level) / 100f);
                 var innerRect = new RectangleF(4, 8, innerWidth, 16);
                 using var fillBrush = new SolidBrush(fillColor);
                 g.FillRoundedRectangle(fillBrush, innerRect, 2);
 
-                // 4. Şarj İkonu veya Yüzde Metni
+                // 4. Charging Bolt Icon or Percentage Text
                 if (isCharging)
                 {
-                    // Küçük şimşek çizimi
+                    // Mini lightning bolt drawing
                     PointF[] bolt =
                     [
                         new PointF(15, 8),
@@ -92,7 +92,7 @@ public static class TrayIconGenerator
                 }
                 else if (level <= 99)
                 {
-                    // Rakamı pilin üzerine okunaklı ve kontrastlı çiz
+                    // Draw legible high-contrast percentage number over battery
                     string text = level.ToString();
                     using var font = new Font("Segoe UI", level == 100 ? 8f : 9f, FontStyle.Bold, GraphicsUnit.Pixel);
                     using var textBrush = new SolidBrush(level >= 35 ? (isDarkTheme ? Color.Black : Color.White) : Color.White);
@@ -130,15 +130,15 @@ public static class TrayIconGenerator
         float diameter = radius * 2;
         var arc = new RectangleF(bounds.Location, new SizeF(diameter, diameter));
 
-        // Sol üst
+        // Top-left
         path.AddArc(arc, 180, 90);
-        // Sağ üst
+        // Top-right
         arc.X = bounds.Right - diameter;
         path.AddArc(arc, 270, 90);
-        // Sağ alt
+        // Bottom-right
         arc.Y = bounds.Bottom - diameter;
         path.AddArc(arc, 0, 90);
-        // Sol alt
+        // Bottom-left
         arc.X = bounds.Left;
         path.AddArc(arc, 90, 90);
 

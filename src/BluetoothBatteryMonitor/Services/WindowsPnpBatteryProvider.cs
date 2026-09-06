@@ -11,16 +11,16 @@ using Windows.Devices.Enumeration;
 namespace BluetoothBatteryMonitor.Services;
 
 /// <summary>
-/// Windows Tak ve Çalıştır (PnP / DEVPKEY) özellikleri üzerinden pil bilgilerini okuyan sağlayıcı.
-/// Xbox Wireless Controller, modern Bluetooth kulaklıklar, fareler ve telefonların Windows tarafından
-/// kaydedilen pil değerlerini ({104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2) yakalar.
+/// Provider that reads battery information via Windows Plug and Play (PnP / DEVPKEY) properties.
+/// Captures battery values ({104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2) recorded by Windows for
+/// Xbox Wireless Controllers, modern Bluetooth headphones, mice, and phones.
 /// </summary>
 public class WindowsPnpBatteryProvider
 {
     // DEVPKEY_Device_BatteryLevel ({104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2)
     public const string PnpBatteryLevelKey = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
 
-    // System.Devices.BatteryLevel (Windows modern pil özelliği)
+    // System.Devices.BatteryLevel (Windows modern battery property)
     public const string SystemBatteryLevelKey = "System.Devices.BatteryLevel";
 
     // DEVPKEY_Device_BatteryStatus ({104EA319-6EE2-4701-BD47-8DDBF425BBE5} 3)
@@ -66,16 +66,16 @@ public class WindowsPnpBatteryProvider
     }
 
     /// <summary>
-    /// PnP cihaz izleyicisini başlatır ve eşleştirilmiş tüm Bluetooth ve HFP cihazlarını tarar.
+    /// Starts the PnP device watcher and scans all paired Bluetooth and HFP devices.
     /// </summary>
     public async Task StartAsync()
     {
         try
         {
-            // Önce mevcut cihazların anlık taramasını yap
+            // Perform an initial scan of existing devices first
             await RefreshAsync();
 
-            // 1. AssociationEndpoint Watcher (Klasik Bluetooth ve BLE AEP)
+            // 1. AssociationEndpoint Watcher (Classic Bluetooth and BLE AEP)
             string aepSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
             _aepDeviceWatcher = DeviceInformation.CreateWatcher(aepSelector, RequestedProperties, DeviceInformationKind.AssociationEndpoint);
             _aepDeviceWatcher.Added += OnWatcherDeviceAdded;
@@ -83,7 +83,7 @@ public class WindowsPnpBatteryProvider
             _aepDeviceWatcher.Removed += OnWatcherDeviceRemoved;
             _aepDeviceWatcher.Start();
 
-            // 2. Windows DevNode Watcher (Xbox kolu, HFP Ses Kulaklığı, BTHENUM donanımları)
+            // 2. Windows DevNode Watcher (Xbox controllers, HFP audio headsets, BTHENUM hardware)
             string pnpAqs = "(System.Devices.DeviceInstanceId:~~\"BTHENUM\" OR System.Devices.DeviceInstanceId:~~\"BTH\" OR System.Devices.DeviceInstanceId:~~\"BLUETOOTH\" OR System.Devices.DeviceInstanceId:~~\"HID\")";
             _pnpDeviceWatcher = DeviceInformation.CreateWatcher(pnpAqs, RequestedProperties, DeviceInformationKind.Device);
             _pnpDeviceWatcher.Added += OnWatcherDeviceAdded;
@@ -100,7 +100,7 @@ public class WindowsPnpBatteryProvider
     }
 
     /// <summary>
-    /// Sağlayıcıyı durdurur.
+    /// Stops the provider.
     /// </summary>
     public Task StopAsync()
     {
@@ -134,13 +134,13 @@ public class WindowsPnpBatteryProvider
     }
 
     /// <summary>
-    /// Eşleşmiş tüm cihazları (AEP, PnP DevNode, HFP Ses, Xbox) sorgular.
+    /// Queries all paired devices (AEP, PnP DevNode, HFP Audio, Xbox).
     /// </summary>
     public async Task RefreshAsync()
     {
         try
         {
-            // 1. Windows PnP DevNode'ları (BTHENUM, HFP Ses aygıtları, Xbox kolları, HID pilleri)
+            // 1. Windows PnP DevNodes (BTHENUM, HFP audio devices, Xbox controllers, HID batteries)
             string pnpAqs = "(System.Devices.DeviceInstanceId:~~\"BTHENUM\" OR System.Devices.DeviceInstanceId:~~\"BTH\" OR System.Devices.DeviceInstanceId:~~\"BLUETOOTH\" OR System.Devices.DeviceInstanceId:~~\"HID\")";
             try
             {
@@ -155,7 +155,7 @@ public class WindowsPnpBatteryProvider
                 Debug.WriteLine($"[WindowsPnpBatteryProvider] PnP devnode tarama hatası: {ex.Message}");
             }
 
-            // 2. Klasik Bluetooth AEP cihazları
+            // 2. Classic Bluetooth AEP devices
             try
             {
                 string btSelector = BluetoothDevice.GetDeviceSelectorFromPairingState(true);
@@ -170,7 +170,7 @@ public class WindowsPnpBatteryProvider
                 Debug.WriteLine($"[WindowsPnpBatteryProvider] BT AEP tarama hatası: {ex.Message}");
             }
 
-            // 3. BLE AEP cihazları
+            // 3. BLE AEP devices
             try
             {
                 string bleSelector = BluetoothLEDevice.GetDeviceSelectorFromPairingState(true);
@@ -250,7 +250,7 @@ public class WindowsPnpBatteryProvider
 
     private void UpdateDeviceWithProperties(BluetoothDeviceModel model, IReadOnlyDictionary<string, object> properties)
     {
-        // 1. Pil Seviyesi Okuma (Önce DEVPKEY_Device_BatteryLevel, sonra System.Devices.BatteryLevel)
+        // 1. Battery Level Reading (First DEVPKEY_Device_BatteryLevel, then System.Devices.BatteryLevel)
         object? batteryObj = null;
         if (properties.TryGetValue(PnpBatteryLevelKey, out var pnpObj) && pnpObj != null)
         {
@@ -275,7 +275,7 @@ public class WindowsPnpBatteryProvider
             catch { }
         }
 
-        // 2. Pil Şarj Durumu
+        // 2. Battery Charging Status
         if (properties.TryGetValue(PnpBatteryStatusKey, out var statusObj) && statusObj != null)
         {
             try
@@ -287,7 +287,7 @@ public class WindowsPnpBatteryProvider
             catch { }
         }
 
-        // 3. Bağlantı Durumu (AEP canlı bağlantı teyidi zorunludur)
+        // 3. Connection Status (AEP live connection confirmation is mandatory)
         if (properties.TryGetValue(PnpAepIsConnectedKey, out var aepConnObj) && aepConnObj is bool isAepConnected)
         {
             model.IsConnected = isAepConnected;
@@ -298,7 +298,7 @@ public class WindowsPnpBatteryProvider
         }
 
 
-        // 4. Bluetooth MAC Adresi (varsa)
+        // 4. Bluetooth MAC Address (if available)
         if (properties.TryGetValue(PnpBluetoothAddressKey, out var addrObj) && addrObj != null)
         {
             try
@@ -313,7 +313,7 @@ public class WindowsPnpBatteryProvider
             model.BluetoothAddress = BluetoothDeviceModel.ExtractMacAddress(model.Id);
         }
 
-        // 5. Kaynak sağlayıcı detaylandırması (Hands-Free HFP ses aygıtı veya Xbox tespiti)
+        // 5. Provider source detail (Hands-Free HFP audio device or Xbox detection)
         if (model.Type is DeviceType.Headset or DeviceType.Headphones or DeviceType.Speaker ||
             model.Id.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase))
         {
@@ -330,13 +330,13 @@ public class WindowsPnpBatteryProvider
     }
 
     /// <summary>
-    /// Cihaz adı ve PnP kategori özelliklerine göre DeviceType belirler.
+    /// Determines DeviceType based on device name and PnP category properties.
     /// </summary>
     public static DeviceType DetectDeviceType(string name, IReadOnlyDictionary<string, object>? properties = null)
     {
         string n = name.ToLowerInvariant();
 
-        // İsim bazlı tespit
+        // Name-based detection
         if (n.Contains("xbox") || n.Contains("controller") || n.Contains("gamepad") || n.Contains("dualshock") || n.Contains("dualsense"))
         {
             return DeviceType.Gamepad;
@@ -378,7 +378,7 @@ public class WindowsPnpBatteryProvider
             return DeviceType.Stylus;
         }
 
-        // Kategori bazlı tespit
+        // Category-based detection
         if (properties != null && properties.TryGetValue(PnpAepCategoryKey, out var catObj) && catObj is string category)
         {
             string cat = category.ToLowerInvariant();

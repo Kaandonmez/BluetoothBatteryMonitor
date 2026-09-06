@@ -33,7 +33,7 @@ public class SmartAudioRouter : IDisposable
 
         if (!settings.AutoSwitchAudioEndpoint)
         {
-            // Eğer özellik kapatılmışsa ve aktif yönlendirmemiz varsa geri al
+            // If feature is disabled and an active override exists, revert to previous endpoint
             if (!string.IsNullOrEmpty(_activeEndpointId))
             {
                 FallbackToPreviousEndpoint();
@@ -48,7 +48,7 @@ public class SmartAudioRouter : IDisposable
             .Where(d => d.Type is DeviceType.Headphones or DeviceType.Earbuds or DeviceType.Speaker)
             .ToList();
 
-        // 1. Yeni bağlanan veya henüz yönlendirilmemiş ses aygıtı var mı?
+        // 1. Check for newly connected or not yet routed audio devices
         foreach (var dev in audioDevices)
         {
             if (!dev.IsConnected) continue;
@@ -64,7 +64,7 @@ public class SmartAudioRouter : IDisposable
                     var currentDefault = _endpointManager.GetDefaultPlaybackDeviceId();
                     if (!string.Equals(currentDefault, endpoint.Id, StringComparison.OrdinalIgnoreCase))
                     {
-                        // İlk kez geçiş yapılıyorsa önceki varsayılanı hatırla
+                        // Remember previous default endpoint when switching for the first time
                         if (string.IsNullOrEmpty(_previousDefaultEndpointId))
                         {
                             _previousDefaultEndpointId = currentDefault;
@@ -75,12 +75,12 @@ public class SmartAudioRouter : IDisposable
                             _activeAudioDeviceId = dev.Id;
                             _activeEndpointId = endpoint.Id;
                             _hadActiveEarbuds = dev.IsTws && (dev.LeftBatteryLevel.HasValue || dev.RightBatteryLevel.HasValue);
-                            RouteChanged?.Invoke(this, $"Varsayılan ses çıkışı '{endpoint.Name}' olarak ayarlandı.");
+                            RouteChanged?.Invoke(this, $"Default audio endpoint routed to '{endpoint.Name}'.");
                         }
                     }
                     else
                     {
-                        // Halihazırda varsayılan bu aygıt
+                        // Already set as current default endpoint
                         _activeAudioDeviceId = dev.Id;
                         _activeEndpointId = endpoint.Id;
                         _hadActiveEarbuds = dev.IsTws && (dev.LeftBatteryLevel.HasValue || dev.RightBatteryLevel.HasValue);
@@ -88,12 +88,12 @@ public class SmartAudioRouter : IDisposable
 
                     _knownConnectedDeviceIds.Add(dev.Id);
                 }
-                // Eğer endpoint henüz Windows tarafından enumerate edilmediyse (gecikmeli açılış),
-                // _knownConnectedDeviceIds'e eklenmez ve sonraki tick'te tekrar taranır.
+                // If endpoint has not been enumerated by Windows yet (delayed startup),
+                // it is not added to _knownConnectedDeviceIds and will be rescanned on next tick.
             }
         }
 
-        // 2. Bağlantısı kopan veya kutuya konan ses aygıtı var mı?
+        // 2. Check for disconnected or case-docked audio devices
         if (!string.IsNullOrEmpty(_activeAudioDeviceId))
         {
             var activeDev = audioDevices.FirstOrDefault(d => d.Id == _activeAudioDeviceId);
@@ -104,10 +104,10 @@ public class SmartAudioRouter : IDisposable
                 _hadActiveEarbuds = true;
             }
 
-            // TWS cihazlar kutusuna konduğunda:
-            // - Kutu seviyesi varken kulaklıkların ikisi birden yayını kesmişse,
-            // - veya her iki kulaklık kutuda şarj alıyorsa,
-            // - veya daha önce kulaklık pilleri varken şimdi tamamen null olduysa ve ana pil de yoksa.
+            // When TWS devices are placed in charging case:
+            // - If case level exists while both earbuds stop transmitting,
+            // - or both earbuds are actively charging inside the case,
+            // - or earbuds previously reported levels but are now null with no main battery.
             bool isTwsInCase = activeDev != null && activeDev.IsTws &&
                                ((activeDev.CaseBatteryLevel.HasValue && !activeDev.LeftBatteryLevel.HasValue && !activeDev.RightBatteryLevel.HasValue) ||
                                 (activeDev.IsLeftCharging && activeDev.IsRightCharging && activeDev.CaseBatteryLevel.HasValue) ||
@@ -122,7 +122,7 @@ public class SmartAudioRouter : IDisposable
             }
         }
 
-        // 3. Bağlantısı kopan cihazları bilinenler kümesinden çıkar
+        // 3. Purge disconnected devices from known active set
         foreach (var dev in audioDevices)
         {
             if (!dev.IsConnected)
@@ -147,14 +147,14 @@ public class SmartAudioRouter : IDisposable
                 var endpoints = _endpointManager.GetPlaybackEndpoints();
                 var prevEndpoint = endpoints.FirstOrDefault(e =>
                     string.Equals(e.Id, targetId, StringComparison.OrdinalIgnoreCase));
-                string name = prevEndpoint?.Name ?? "Önceki Aygıt";
-                RouteChanged?.Invoke(this, $"Varsayılan ses çıkışı önceki cihaza ('{name}') geri döndürüldü.");
+                string name = prevEndpoint?.Name ?? "Previous Device";
+                RouteChanged?.Invoke(this, $"Default audio endpoint restored to '{name}'.");
                 return true;
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[SmartAudioRouter] Fallback hatası: {ex.Message}");
+            Debug.WriteLine($"[SmartAudioRouter] Fallback error: {ex.Message}");
         }
 
         return false;
@@ -165,7 +165,7 @@ public class SmartAudioRouter : IDisposable
         if (_isDisposed) return;
         _isDisposed = true;
 
-        // Uygulama sonlandırılırken fallback yap
+        // Restore endpoint when shutting down
         FallbackToPreviousEndpoint();
     }
 }

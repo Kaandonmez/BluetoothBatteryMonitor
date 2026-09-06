@@ -27,18 +27,25 @@ public partial class FlyoutWindow : FluentWindow
         InitializeComponent();
         DataContext = viewModel;
 
+        try
+        {
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/BluetoothBatteryMonitor.App;component/Assets/app.ico", UriKind.Absolute));
+        }
+        catch { }
+
         Loaded += OnLoaded;
         ContentRendered += OnContentRendered;
         SizeChanged += OnSizeChanged;
 
-        // Çocuk context menülerin (örneğin cihaz kartı pil eşiği menüsü) açılıp kapanışını takip et
+        // Track opening and closing of child context menus (e.g. device card threshold menu)
         AddHandler(System.Windows.Controls.ContextMenuService.ContextMenuOpeningEvent,
             new System.Windows.Controls.ContextMenuEventHandler((s, e) => _isChildContextMenuOpen = true));
         AddHandler(System.Windows.Controls.ContextMenuService.ContextMenuClosingEvent,
             new System.Windows.Controls.ContextMenuEventHandler((s, e) =>
             {
                 _isChildContextMenuOpen = false;
-                // Alt menü kapandığında pencere odağı kaybetmişse (dışarı tıklandıysa) pencereyi kapat
+                // When child menu closes, hide flyout if it lost focus (clicked outside)
                 Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
                 {
                     if (!_isChildContextMenuOpen && !IsActive && !IsKeyboardFocusWithin)
@@ -48,7 +55,7 @@ public partial class FlyoutWindow : FluentWindow
                 }));
             }));
 
-        // ESC tuşuyla anında kapatma desteği
+        // Support instant dismissal with Escape key
         PreviewKeyDown += (s, e) =>
         {
             if (e.Key == System.Windows.Input.Key.Escape)
@@ -58,7 +65,7 @@ public partial class FlyoutWindow : FluentWindow
             }
         };
 
-        // Pencere henüz gösterilmeden önce konumu ata (CW_USEDEFAULT engelle)
+        // Pre-calculate window position before first render (avoid CW_USEDEFAULT)
         RepositionFlyout();
     }
 
@@ -89,7 +96,7 @@ public partial class FlyoutWindow : FluentWindow
         var helper = new WindowInteropHelper(this);
         if (helper.Handle == IntPtr.Zero) return;
 
-        // Windows 11 yuvarlak köşelerini zorunlu kıl
+        // Enforce Windows 11 rounded corners via DWM
         int preference = (int)NativeMethods.DWM_WINDOW_CORNER_PREFERENCE.DWMWCP_ROUND;
         NativeMethods.DwmSetWindowAttribute(
             helper.Handle,
@@ -99,7 +106,7 @@ public partial class FlyoutWindow : FluentWindow
     }
 
     /// <summary>
-    /// Pencereyi görev çubuğunun hemen üzerine tabanını sabitleyerek yeniden konumlandırır.
+    /// Repositions the flyout anchored cleanly adjacent to the taskbar.
     /// </summary>
     public void RepositionFlyout()
     {
@@ -144,7 +151,7 @@ public partial class FlyoutWindow : FluentWindow
         int currentGen = ++_animationGeneration;
         BeginAnimation(OpacityProperty, null);
 
-        // Önce pencere koordinatlarını hazırla
+        // Pre-calculate window coordinates
         RepositionFlyout();
 
         Opacity = 0;
@@ -162,7 +169,7 @@ public partial class FlyoutWindow : FluentWindow
 
         if (!_hasRendered || ActualHeight <= 0)
         {
-            // İlk açılışta layout tamamen oluştuktan sonra konumlandır ve göster
+            // On initial show, position and display after layout finishes measuring
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
             {
                 RepositionFlyout();
@@ -238,7 +245,7 @@ public partial class FlyoutWindow : FluentWindow
     }
 
     /// <summary>
-    /// Context menu açılırken veya tepsi kapatma tıklamasında Flyout'u animasyonsuz anında kapatır.
+    /// Hides the flyout instantly without animation (used when context menu opens or tray exit clicked).
     /// </summary>
     public void HideImmediately()
     {
@@ -268,7 +275,7 @@ public partial class FlyoutWindow : FluentWindow
 
         _lastDeactivatedTime = DateTime.UtcNow;
 
-        // Cihaz kartı context menüsü açıksa Flyout'u kapatma
+        // Do not dismiss flyout if a child context menu is currently active
         if (_isChildContextMenuOpen)
         {
             return;

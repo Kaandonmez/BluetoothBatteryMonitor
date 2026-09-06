@@ -10,18 +10,18 @@ public class SamsungGalaxyBudsTests
     [Fact]
     public void TryParseGalaxyBudsPacket_ExtendedStatus0x60_ParsesLeftRightCaseAndCharging()
     {
-        // Galaxy Buds Extended Status paketi (0x60)
+        // Galaxy Buds Extended Status packet (0x60)
         byte[] packet = new byte[12];
         packet[0] = 0xFD; // SOM
-        packet[1] = 0x08; // Uzunluk LSB
-        packet[2] = 0x00; // Uzunluk MSB
+        packet[1] = 0x08; // Length LSB
+        packet[2] = 0x00; // Length MSB
         packet[3] = 0x60; // MsgId: Extended Status
         packet[4] = 0x01; // Revision
-        packet[5] = 85;   // Sol Kulaklık: %85
-        packet[6] = 90;   // Sağ Kulaklık: %90
+        packet[5] = 85;   // Left Earbud: 85%
+        packet[6] = 90;   // Right Earbud: 90%
         packet[7] = 0x00; // Coupled / Placement
-        packet[8] = 100;  // Kutu: %100
-        packet[9] = 0x05; // Şarj bitleri: bit 0 (Sol: 0x01) ve bit 2 (Kutu: 0x04) -> 0x05
+        packet[8] = 100;  // Case: 100%
+        packet[9] = 0x05; // Charging bits: bit 0 (Left: 0x01) and bit 2 (Case: 0x04) -> 0x05
 
         bool success = AppBuds.TryParseGalaxyBudsPacket(packet, out var info);
 
@@ -43,10 +43,10 @@ public class SamsungGalaxyBudsTests
         packet[1] = 0x06;
         packet[2] = 0x00;
         packet[3] = 0x61; // MsgId: Basic Status
-        packet[4] = 60;   // Sol: %60
-        packet[5] = 65;   // Sağ: %65
-        packet[6] = 80;   // Kutu: %80
-        packet[7] = 0x02; // Sağ şarjda (bit 1 = 0x02)
+        packet[4] = 60;   // Left: 60%
+        packet[5] = 65;   // Right: 65%
+        packet[6] = 80;   // Case: 80%
+        packet[7] = 0x02; // Right charging (bit 1 = 0x02)
 
         bool success = AppBuds.TryParseGalaxyBudsPacket(packet, out var info);
 
@@ -63,20 +63,20 @@ public class SamsungGalaxyBudsTests
     [Fact]
     public void TryParseGalaxyBudsPacket_WithOffset_FindsSom0xFDAndParses()
     {
-        // Başında gürültü / protokol başlığı olan paket
+        // Packet with noise / protocol header at the beginning
         byte[] packet = new byte[16];
         packet[0] = 0xAA;
         packet[1] = 0xBB;
-        packet[2] = 0xFD; // SOM burada başlıyor
+        packet[2] = 0xFD; // SOM begins here
         packet[3] = 0x08;
         packet[4] = 0x00;
         packet[5] = 0x60;
         packet[6] = 0x01;
-        packet[7] = 75;  // Sol: 75
-        packet[8] = 80;  // Sağ: 80
+        packet[7] = 75;  // Left: 75
+        packet[8] = 80;  // Right: 80
         packet[9] = 0x00;
-        packet[10] = 95; // Kutu: 95
-        packet[11] = 0x07; // Hepsi şarjda
+        packet[10] = 95; // Case: 95
+        packet[11] = 0x07; // All charging
 
         bool success = AppBuds.TryParseGalaxyBudsPacket(packet, out var info);
 
@@ -95,7 +95,7 @@ public class SamsungGalaxyBudsTests
     {
         Assert.False(AppBuds.TryParseGalaxyBudsPacket(null!, out _));
         Assert.False(AppBuds.TryParseGalaxyBudsPacket([0xFD, 0x01, 0x00], out _));
-        Assert.False(AppBuds.TryParseGalaxyBudsPacket([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07], out _)); // SOM yok
+        Assert.False(AppBuds.TryParseGalaxyBudsPacket([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07], out _)); // No SOM
     }
 
     [Theory]

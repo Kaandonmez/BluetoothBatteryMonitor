@@ -25,7 +25,7 @@ public class BluetoothDeviceModel
     }
     public string? AudioCodec { get; set; }
 
-    // TWS (AirPods / Beats vb. için özel kanallar)
+    // TWS (Dedicated channels for AirPods, Beats, Galaxy Buds, etc.)
     public bool IsTws { get; set; }
     public int? LeftBatteryLevel { get; set; }
     public bool IsLeftCharging { get; set; }
@@ -34,14 +34,14 @@ public class BluetoothDeviceModel
     public int? CaseBatteryLevel { get; set; }
     public bool IsCaseCharging { get; set; }
 
-    public string ProviderSource { get; set; } = "Bilinmiyor";
+    public string ProviderSource { get; set; } = "Unknown";
     public DateTime LastUpdated { get; set; } = DateTime.Now;
     public ulong BluetoothAddress { get; set; }
     public ulong SecondaryBluetoothAddress { get; set; }
     public bool IsAggregated { get; set; }
 
     /// <summary>
-    /// Cihazın geçerli en düşük pil seviyesini döner (TWS cihazlarda kulaklıklar ve kutu dahil).
+    /// Returns effective minimum battery level (including left/right buds and case for TWS devices).
     /// </summary>
     public int? EffectiveBatteryLevel
     {
@@ -56,7 +56,7 @@ public class BluetoothDeviceModel
             if (RightBatteryLevel.HasValue && RightBatteryLevel >= 0)
                 min = min.HasValue ? Math.Min(min.Value, RightBatteryLevel.Value) : RightBatteryLevel.Value;
 
-            // Kutu pili kulaklıkların ana pilini ezmemelidir; yalnızca her iki kulaklık da okunamıyorsa kutu pili fallback alınır
+            // Case battery should not override earbuds battery; only used as fallback if both buds are unavailable
             if (!min.HasValue && CaseBatteryLevel.HasValue && CaseBatteryLevel >= 0)
                 min = CaseBatteryLevel.Value;
 
@@ -65,62 +65,60 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// İki modelin aynı fiziksel Bluetooth cihazına ait olup olmadığını kontrol eder.
-    /// MAC adresi eşleşmesi, çift modlu (Dual-mode) Klasik BT/BLE uyumu, sağlayıcılar arası PnP/GATT geçişi
-    /// ve spesifik dostane ad kurallarını uygular.
+    /// Checks whether two models represent the same physical Bluetooth device.
+    /// Evaluates MAC address matching, dual-mode Classic BT/BLE compatibility, cross-provider PnP/GATT transitions,
+    /// and specific friendly name normalization rules.
     /// </summary>
     public bool Matches(BluetoothDeviceModel other)
     {
         if (other == null) return false;
 
-        // 1. Doğrudan benzersiz Id eşleşmesi
+        // 1. Direct unique Id match
         if (!string.IsNullOrEmpty(Id) && !string.IsNullOrEmpty(other.Id) &&
             string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        // MAC adreslerini tespit et
+        // Detect MAC addresses
         ulong mac1 = BluetoothAddress != 0 ? BluetoothAddress : ExtractMacAddress(Id);
         ulong mac2 = other.BluetoothAddress != 0 ? other.BluetoothAddress : ExtractMacAddress(other.Id);
 
-        // 2. Bluetooth MAC adresi birebir eşleşmesi (Aynı donanım MAC'i kesinlikle tek bir fiziksel cihazdır)
+        // 2. Exact Bluetooth MAC address match (identical hardware MAC is guaranteed to be the same physical device)
         if (mac1 != 0 && mac2 != 0 && mac1 == mac2)
         {
             return true;
         }
 
-        // 3. Jenerik olmayan temizlenmiş dostane ad eşleşmesi
+        // 3. Non-generic cleaned friendly name match
         string name1 = CleanNameForComparison(Name);
         string name2 = CleanNameForComparison(other.Name);
         if (!IsGenericName(name1) && !IsGenericName(name2))
         {
-            // 3.a Birebir aynı normalize edilmiş ad
+            // 3.a Identical normalized name
             if (string.Equals(name1, name2, StringComparison.OrdinalIgnoreCase))
             {
-                // MAC'lerden biri bilinmiyorsa (0 ise), aynıysa veya ardışıksa (dual-mode yonga) doğrudan aynı fiziksel cihazdır
+                // If one MAC is unknown (0), identical, or adjacent (dual-mode chipset), treat as the same physical device
                 if (mac1 == 0 || mac2 == 0 || mac1 == mac2 || IsAdjacentMac(mac1, mac2))
                 {
                     return true;
                 }
 
-                // Çapraz profil veya sağlayıcı: Biri Klasik/HFP diğeri BLE/GATT ise ya da biri Windows PnP diğeri BLE GATT/Özel Sağlayıcı ise
+                // Cross-profile or provider: Classic/HFP vs BLE/GATT, or Windows PnP vs BLE GATT/Custom Provider
                 if (IsCrossTransportOrProvider(this, other))
                 {
                     return true;
                 }
 
-                // Mobil cihaz / Apple cihazı (iPhone, iPad vb.):
-                // Apple cihazları BLE için Random Private Address (RPA) kullandığından Klasik MAC ile BLE MAC donanımsal olarak farklıdır.
+                // Mobile / Apple devices using RPA (Random Private Address): Classic MAC differs from BLE MAC by hardware design
                 if (IsAppleOrMobileDevice(name1, Id) || IsAppleOrMobileDevice(name2, other.Id))
                 {
                     return true;
                 }
             }
 
-            // 3.b Alt dize veya varyant eşleşmesi (Örn: "AirPods Pro - Find My" ile "AirPods Pro")
-            // DİKKAT: Farklı donanım MAC adreslerine sahip iki cihaz (örn: iki farklı fare veya "AirPods Pro" ve "AirPods")
-            // ASLA alt dize benzerliğiyle birleştirilmemelidir!
+            // 3.b Substring or variant matching (e.g., "AirPods Pro - Find My" with "AirPods Pro")
+            // CAUTION: Two devices with different hardware MACs must NEVER be merged via substring similarity!
             bool macsConflict = (mac1 != 0 && mac2 != 0 && mac1 != mac2 && !IsAdjacentMac(mac1, mac2));
             if (!macsConflict && name1.Length >= 4 && name2.Length >= 4 &&
                 (DeviceType == other.DeviceType || DeviceType == DeviceType.Generic || other.DeviceType == DeviceType.Generic))
@@ -136,7 +134,7 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// Donanımsal dual-mode yongaların (BR/EDR ve BLE için) ardışık MAC adresi (örn: MAC ve MAC+1) tahsisini kontrol eder.
+    /// Checks for adjacent MAC addresses allocated by dual-mode chipsets (e.g., MAC and MAC+1 for BR/EDR and BLE).
     /// </summary>
     public static bool IsAdjacentMac(ulong m1, ulong m2)
     {
@@ -146,7 +144,7 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// Bir cihazın Klasik Bluetooth / HFP veya ses profili olup olmadığını kontrol eder.
+    /// Checks if a device uses Classic Bluetooth / HFP or audio profile.
     /// </summary>
     public static bool IsClassicOrHfp(BluetoothDeviceModel dev)
     {
@@ -156,13 +154,14 @@ public class BluetoothDeviceModel
 
         return src.Contains("HFP", StringComparison.OrdinalIgnoreCase) ||
                src.Contains("AVRCP", StringComparison.OrdinalIgnoreCase) ||
+               src.Contains("Classic", StringComparison.OrdinalIgnoreCase) ||
                src.Contains("Klasik", StringComparison.OrdinalIgnoreCase) ||
                id.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase) ||
                !string.IsNullOrEmpty(dev.AudioCodec);
     }
 
     /// <summary>
-    /// Bir cihazın BLE GATT veya Düşük Enerjili profil olup olmadığını kontrol eder.
+    /// Checks if a device uses BLE GATT or Low Energy profile.
     /// </summary>
     public static bool IsBleOrGatt(BluetoothDeviceModel dev)
     {
@@ -183,19 +182,19 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// İki cihaz kaydının birbirini tamamlayan çift modlu taşıma yollarından (Classic vs BLE veya PnP vs GATT) gelip gelmediğini kontrol eder.
+    /// Checks if two records arrive via complementary dual-mode transport layers (Classic vs BLE or PnP vs GATT).
     /// </summary>
     public static bool IsCrossTransportOrProvider(BluetoothDeviceModel a, BluetoothDeviceModel b)
     {
         if (a == null || b == null) return false;
 
-        // Biri Classic/HFP diğeri BLE/GATT
+        // One Classic/HFP and the other BLE/GATT
         if ((IsClassicOrHfp(a) && IsBleOrGatt(b)) || (IsClassicOrHfp(b) && IsBleOrGatt(a)))
         {
             return true;
         }
 
-        // Biri Windows PnP diğeri BLE GATT veya başka bir özel sağlayıcı
+        // One Windows PnP and the other BLE GATT or custom provider
         string srcA = a.ProviderSource ?? string.Empty;
         string srcB = b.ProviderSource ?? string.Empty;
         bool aIsPnp = srcA.Contains("PnP", StringComparison.OrdinalIgnoreCase);
@@ -208,7 +207,7 @@ public class BluetoothDeviceModel
             return true;
         }
 
-        // Windows PnP içinde biri BTHENUM diğeri BTHLE
+        // Within Windows PnP, one BTHENUM and the other BTHLE
         string idA = a.Id ?? string.Empty;
         string idB = b.Id ?? string.Empty;
         if ((idA.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase) && idB.Contains("BTHLE", StringComparison.OrdinalIgnoreCase)) ||
@@ -236,7 +235,7 @@ public class BluetoothDeviceModel
         string diff = longer.Substring(shorter.Length).Trim();
         if (string.IsNullOrEmpty(diff)) return true;
 
-        // Farklı ürün modelini belirten kelimeler içeriyorsa (örn: "Pro", "Max", "Plus", "Mini", "Ultra", "Lite", "3S" vs "3") bunlar farklı fiziksel modellerdir!
+        // If diff contains model-distinguishing terms (e.g. "Pro", "Max", "Plus", "Mini", "Ultra", "Lite", "3S" vs "3"), they are distinct models!
         var forbiddenWords = new[] { "pro", "max", "plus", "mini", "ultra", "lite", "se", "fe", "sport", "active" };
         var diffWords = diff.Split(new[] { ' ', '-', '_', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -252,8 +251,8 @@ public class BluetoothDeviceModel
     }
 
     /// <summary>
-    /// Cihazın Apple (iPhone, iPad vb.) veya RPA kullanan bir akıllı telefon olup olmadığını belirler.
-    /// "headphone", "earphone", "microphone" gibi ses cihazlarını telefon olarak algılamaz.
+    /// Determines whether the device is an Apple device (iPhone, iPad, etc.) or a smartphone utilizing RPA.
+    /// Excludes audio equipment such as "headphone", "earphone", "microphone".
     /// </summary>
     public static bool IsAppleOrMobileDevice(string? name, string? id)
     {
@@ -280,13 +279,13 @@ public class BluetoothDeviceModel
     {
         if (string.IsNullOrWhiteSpace(id)) return 0;
 
-        // 1. Windows UWP BluetoothLE formatı: BluetoothLE#BluetoothLE<adapter>-<device>
-        // Hedef uç cihazın MAC adresi adapter'dan sonraki (tireden sonraki) kısımdır.
+        // 1. Windows UWP BluetoothLE format: BluetoothLE#BluetoothLE<adapter>-<device>
+        // Target peripheral MAC address is after the adapter (following the dash).
         int bleIdx = id.IndexOf("BluetoothLE#BluetoothLE", StringComparison.OrdinalIgnoreCase);
         if (bleIdx >= 0)
         {
             string after = id.Substring(bleIdx + "BluetoothLE#BluetoothLE".Length);
-            // Format 1: 17 karakter adapter (00:11:22:33:44:55 veya 00-11-22-33-44-55) + '-' + device
+            // Format 1: 17-char adapter (00:11:22:33:44:55 or 00-11-22-33-44-55) + '-' + device
             if (after.Length >= 18 && after[17] == '-')
             {
                 string devPart = after.Substring(18);
@@ -297,7 +296,7 @@ public class BluetoothDeviceModel
                     return bleMac;
                 }
             }
-            // Format 2: 12 karakter adapter (001122334455) + '-' + device
+            // Format 2: 12-char adapter (001122334455) + '-' + device
             if (after.Length >= 13 && after[12] == '-')
             {
                 string devPart = after.Substring(13);
@@ -310,10 +309,10 @@ public class BluetoothDeviceModel
             }
         }
 
-        // 2. Genel cihaz yolları (BTHENUM, BTHLE, DEV_...): Aday MAC eşleşmelerini topla
+        // 2. Device instance paths (BTHENUM, BTHLE, DEV_...): collect candidate MAC matches
         var candidates = new List<(int Index, ulong Mac)>();
 
-        // 2.a İki nokta ile ayrılmış MAC: 00:11:22:33:44:55
+        // 2.a Colon-separated MAC: 00:11:22:33:44:55
         var colonMatches = System.Text.RegularExpressions.Regex.Matches(id, @"([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})");
         foreach (System.Text.RegularExpressions.Match match in colonMatches)
         {
@@ -324,7 +323,7 @@ public class BluetoothDeviceModel
             }
         }
 
-        // 2.b Tire ile ayrılmış MAC: 00-11-22-33-44-55
+        // 2.b Dash-separated MAC: 00-11-22-33-44-55
         var dashMatches = System.Text.RegularExpressions.Regex.Matches(id, @"([0-9a-fA-F]{2}(?:-[0-9a-fA-F]{2}){5})");
         foreach (System.Text.RegularExpressions.Match match in dashMatches)
         {
@@ -335,10 +334,10 @@ public class BluetoothDeviceModel
             }
         }
 
-        // 2.c Windows GUID'lerini ({...}) kaldır
+        // 2.c Strip Windows GUIDs ({...})
         string withoutGuids = System.Text.RegularExpressions.Regex.Replace(id, @"\{[0-9a-fA-F\-]{36}\}", "");
 
-        // 2.d DEV_<MAC>, &<MAC>_, _<MAC>_ veya bitişik 12 haneli MAC adresi
+        // 2.d Match DEV_<MAC>, &<MAC>_, _<MAC>_ or continuous 12-char hex MAC
         var devMatches = System.Text.RegularExpressions.Regex.Matches(withoutGuids, @"(?:DEV_|&|_)([0-9a-fA-F]{12})(?:_|\b|\\|#|$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         foreach (System.Text.RegularExpressions.Match match in devMatches)
         {
@@ -348,7 +347,7 @@ public class BluetoothDeviceModel
             }
         }
 
-        // 2.e GUID dışındaki bağımsız 12 haneli hex
+        // 2.e Standalone 12-char hex outside GUIDs
         var hexMatches = System.Text.RegularExpressions.Regex.Matches(withoutGuids, @"\b([0-9a-fA-F]{12})\b");
         foreach (System.Text.RegularExpressions.Match match in hexMatches)
         {
@@ -360,7 +359,7 @@ public class BluetoothDeviceModel
 
         if (candidates.Count > 0)
         {
-            // Dize içerisinde en son (en sağda) yer alan geçerli uç cihaz MAC'ini seç
+            // Pick right-most valid endpoint MAC in string
             return candidates.OrderByDescending(c => c.Index).First().Mac;
         }
 
@@ -369,7 +368,7 @@ public class BluetoothDeviceModel
 
     private static bool IsValidMac(ulong mac)
     {
-        // 0 ve Bluetooth SIG Base UUID (0x00805F9B34FB) geçersiz donanım MAC'idir
+        // 0 and Bluetooth SIG Base UUID (0x00805F9B34FB) are invalid hardware MACs
         return mac != 0 && mac != 0x00805F9B34FB;
     }
 
@@ -377,7 +376,7 @@ public class BluetoothDeviceModel
     {
         if (string.IsNullOrWhiteSpace(name)) return string.Empty;
 
-        // Akıllı tırnak ve kesme işaretlerini standartlaştır (örn: "kaan- iPhone’u" vs "kaan- iPhone'u")
+        // Normalize smart quotes and apostrophes
         string cleaned = name.Replace('’', '\'').Replace('‘', '\'').Replace('`', '\'');
 
         cleaned = cleaned
@@ -399,11 +398,11 @@ public class BluetoothDeviceModel
             .Replace(" - Find My", "", StringComparison.OrdinalIgnoreCase)
             .Trim();
 
-        // Nesil / Generation eklerini temizle (örn: " (2. Nesil)", " (2nd Generation)", " (Gen 2)")
+        // Normalize Generation suffixes (e.g., " (2. Nesil)", " (2nd Generation)", " (Gen 2)")
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s*\(\s*\d+[\.\s]*(?:Nesil|Gen|Generation)\s*\)", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s*\(\s*\d+[a-zA-Z]{2}\s+(?:Nesil|Gen|Generation)\s*\)", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        // Dual-mode LE prefix ve suffix temizliği
+        // Strip dual-mode LE prefix and suffix
         if (cleaned.StartsWith("LE_", StringComparison.OrdinalIgnoreCase) ||
             cleaned.StartsWith("LE-", StringComparison.OrdinalIgnoreCase) ||
             cleaned.StartsWith("LE ", StringComparison.OrdinalIgnoreCase))

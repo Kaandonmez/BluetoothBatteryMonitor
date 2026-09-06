@@ -17,8 +17,8 @@ public record SteelSeriesBatteryInfo(
     string ModelName);
 
 /// <summary>
-/// SteelSeries Arctis 7, 9, Pro Wireless ve Arctis Nova kablosuz oyuncu kulaklıkları için
-/// HID telemetri ve durum raporlarını ayrıştıran sağlayıcı.
+/// Battery provider for SteelSeries Arctis 7, 9, Pro Wireless, and Arctis Nova wireless gaming headsets.
+/// Parses HID telemetry and status reports to extract battery levels and charging state.
 /// </summary>
 public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
 {
@@ -51,7 +51,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
 
         try
         {
-            // 1. PnP Cihazlarını Tara
+            // 1. Discover PnP Devices
             string aqs = $"(System.Devices.DeviceInstanceId:~~\"{SteelSeriesVendorId}\")";
             var props = new[]
             {
@@ -98,7 +98,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
                 resultList.Add(model);
             }
 
-            // 2. Win32 HID Interface üzerinden doğrudan telemetri oku
+            // 2. Read direct telemetry via Win32 HID Interface
             string hidSelector = $"System.Devices.InterfaceClassGuid:=\"{HidInterfaceGuid}\"";
             var hidDevices = await DeviceInformation.FindAllAsync(hidSelector).AsTask(cancellationToken);
 
@@ -147,7 +147,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
         }
         catch
         {
-            // İstisnayı sessizce yakala
+            // Silently catch scan exceptions
         }
 
         return resultList;
@@ -181,7 +181,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Okuma hatası
+                // Read error
             }
 
             return null;
@@ -227,7 +227,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
             }
             catch
             {
-                // Sessizce geç
+                // Silently ignore transient errors
             }
 
             try
@@ -242,7 +242,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
     }
 
     /// <summary>
-    /// SteelSeries HID telemetri raporunu (Report 0xB0 veya 0x00) ayrıştırır.
+    /// Parses SteelSeries HID telemetry report (Report 0xB0 or 0x00).
     /// </summary>
     public static bool TryParseSteelSeriesReport(byte[] report, out int? batteryLevel, out bool isCharging)
     {
@@ -256,7 +256,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
 
         byte reportId = report[0];
 
-        // Report 0xB0 (Arctis serisi batarya ve şarj telemetrisi)
+        // Report 0xB0 (Arctis series battery and charging telemetry)
         if (reportId == 0xB0)
         {
             byte rawLevel = report[2];
@@ -266,7 +266,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
 
             if (rawLevel <= 4)
             {
-                // 4 basamaklı gösterge (0-4)
+                // 4-step level indicator (0-4)
                 batteryLevel = rawLevel switch
                 {
                     4 => 100,
@@ -284,7 +284,7 @@ public class SteelSeriesBatteryProvider : IBluetoothBatteryProvider
             return batteryLevel.HasValue;
         }
 
-        // Report 0x00 (Arctis Nova serisi telemetri)
+        // Report 0x00 (Arctis Nova series telemetry)
         if (reportId == 0x00 && report.Length >= 4)
         {
             byte rawLevel = report[2];

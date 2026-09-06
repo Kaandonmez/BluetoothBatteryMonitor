@@ -152,7 +152,7 @@ public class BluetoothConnectionCheckerTests
             _output.WriteLine($" - {d.Name} (MAC: {d.BluetoothAddress:X12}, Source: {d.ProviderSource}): Connected={d.IsConnected}, Battery={d.EffectiveBatteryLevel}%");
         }
 
-        // Mifa_A20 veya Xbox Wireless Controller bu sistemde kapalıdır ve bağlı görünmemelidir!
+        // Mifa_A20 or Xbox Wireless Controller is turned off on this system and should not appear connected!
         var mifa = devices.FirstOrDefault(d => d.Name.Contains("Mifa", StringComparison.OrdinalIgnoreCase));
         if (mifa != null)
         {
@@ -165,7 +165,7 @@ public class BluetoothConnectionCheckerTests
             Assert.False(xbox.IsConnected, $"Xbox Controller fiilen bağlı olmadığı halde Connected={xbox.IsConnected} görünüyor!");
         }
 
-        // Bağlı olanlar listede her zaman bağlı olmayanların üstünde yer almalıdır
+        // Connected devices must always appear above disconnected devices in the list
         bool seenDisconnected = false;
         foreach (var d in devices)
         {
@@ -232,17 +232,17 @@ public class BluetoothConnectionCheckerTests
         var snapshot = new AppChecker.BluetoothConnectionSnapshot();
         ulong mifaMac = 0xF44EFD69FA6F;
 
-        // Windows Bluetooth bu MAC adresini biliyor ve bağlı olmadığını teyit ediyor
+        // Windows Bluetooth knows this MAC address and confirms it is disconnected
         snapshot.ClassicConnectedByMac[mifaMac] = false;
         snapshot.AepConnectedByMac[mifaMac] = false;
         snapshot.KnownPairedMacs.Add(mifaMac);
 
-        // Ancak isim eşleşmesi tablosunda başka bir cihaz veya önbellek sebebiyle "Mifa_A20" true kalmış olsun
+        // However, suppose "Mifa_A20" remained true in the name matching table due to another device or cache
         snapshot.ConnectedByName["Mifa_A20"] = true;
 
         var status = snapshot.TryGetStatus(mifaMac, "BTHENUM_MIFA", "Mifa_A20", AppDeviceType.Speaker);
 
-        // Kesin negatif: Donanım MAC adresi kapalıysa isim benzerliği ASLA bunu true yapmamalıdır!
+        // Definite negative: If hardware MAC address is disconnected, name similarity must NEVER make it true!
         Assert.False(status, "Donanım MAC adresi bağlı olmayan cihaz, ConnectedByName eşleşmesi olsa dahi false dönmelidir!");
     }
 
@@ -250,8 +250,8 @@ public class BluetoothConnectionCheckerTests
     public void UpdateConnectionStatuses_DualModeDevice_ChecksSecondaryMacAddress()
     {
         var snapshot = new AppChecker.BluetoothConnectionSnapshot();
-        ulong classicMac = 0x90ECEAF38843; // Classic HFP node (kapalı)
-        ulong bleMac = 0x772F4D139DBD;     // BLE GATT node (bağlı)
+        ulong classicMac = 0x90ECEAF38843; // Classic HFP node (disconnected)
+        ulong bleMac = 0x772F4D139DBD;     // BLE GATT node (connected)
 
         snapshot.ClassicConnectedByMac[classicMac] = false;
         snapshot.AepConnectedByMac[classicMac] = false;
@@ -280,7 +280,7 @@ public class BluetoothConnectionCheckerTests
     {
         var snapshot = new AppChecker.BluetoothConnectionSnapshot();
 
-        // Generic bir ad (örn. "Bluetooth Aygıtı" veya "Wireless Controller")
+        // A generic name (e.g., "Bluetooth Device" or "Wireless Controller")
         snapshot.ConnectedByName["Wireless Controller"] = true;
 
         var disconnectedController = new AppDevice
@@ -294,7 +294,7 @@ public class BluetoothConnectionCheckerTests
 
         var status = snapshot.TryGetStatus(0, disconnectedController.Id, disconnectedController.Name, disconnectedController.DeviceType);
 
-        // Generic isimler ConnectedByName eşleşmesiyle asla "bağlı" kabul edilmemelidir
+        // Generic names must never be considered "connected" through ConnectedByName matching
         Assert.False(status, "Generic isimler ConnectedByName üzerinden bağlı gösterilmemelidir!");
     }
 
@@ -345,7 +345,7 @@ public class BluetoothConnectionCheckerTests
         Assert.Equal("iPhone", list1[1].Name);
         Assert.Equal("K380", list1[2].Name);
 
-        // Kutu pili %20'ye düşse veya kulaklık pili değişse bile liste sırası asla zıplamamalı
+        // Even if case battery drops to 20% or earbud battery changes, list order must never jump
         dev1.CaseBatteryLevel = 20;
         var list2 = engine.CurrentDevices;
         Assert.Equal("AirPods Pro", list2[0].Name);
@@ -356,19 +356,19 @@ public class BluetoothConnectionCheckerTests
     [Fact]
     public void ParseAirPodsData_RejectsNearbyInfo0x10Packet_DoesNotProduce10Or30Percent()
     {
-        // iOS cihazlarının yaydığı 0x10 (Nearby Info) paketi (Byte 5 = 0x13 -> 10% ve 30% zannediliyordu)
+        // 0x10 (Nearby Info) packet broadcast by iOS devices (Byte 5 = 0x13 -> was mistaken for 10% and 30%)
         byte[] nearbyPacket = new byte[10];
         nearbyPacket[0] = 0x10; // Nearby Info
         nearbyPacket[1] = 0x08;
         nearbyPacket[2] = 0x00;
         nearbyPacket[3] = 0x55;
         nearbyPacket[4] = 0x20;
-        nearbyPacket[5] = 0x13; // 0x1 ve 0x3 nibble'ları
+        nearbyPacket[5] = 0x13; // 0x1 and 0x3 nibbles
         nearbyPacket[6] = 0x00;
 
         var result = AppAirPods.ParseAirPodsData(0x112233445566, nearbyPacket);
 
-        Assert.Null(result); // Kesinlikle reddedilmeli ve AirPods olarak ayrıştırılmamalı!
+        Assert.Null(result); // Must be rejected unconditionally and not parsed as AirPods!
     }
 
     [Fact]
@@ -376,13 +376,13 @@ public class BluetoothConnectionCheckerTests
     {
         byte[] validPacket = new byte[27];
         validPacket[0] = 0x07; // Proximity Pairing
-        validPacket[1] = 0x19; // 25 bayt
+        validPacket[1] = 0x19; // 25 bytes
         validPacket[2] = 0x01; // Prefix
         validPacket[3] = 0x0E; // AirPods Pro (0x0E20)
         validPacket[4] = 0x20;
         validPacket[5] = 0x00; // Status (isFlipped = false)
-        validPacket[6] = 0xAA; // Pod A = 10 (%100), Pod B = 10 (%100)
-        validPacket[7] = 0x09; // Case = 9 (%90), no charging
+        validPacket[6] = 0xAA; // Pod A = 10 (100%), Pod B = 10 (100%)
+        validPacket[7] = 0x09; // Case = 9 (90%), no charging
         validPacket[8] = 0x01; // Lid counter
 
         var result = AppAirPods.ParseAirPodsData(0x112233445566, validPacket);
@@ -408,7 +408,7 @@ public class BluetoothConnectionCheckerTests
             LastUpdated = DateTime.Now
         };
 
-        // Kapak açılıp kapatılırken anlık 0xFF (15 = N/A) gelen paket
+        // Transient packet with 0xFF (15 = N/A) arriving when case lid opens or closes
         byte[] transientPacket = new byte[27];
         transientPacket[0] = 0x07;
         transientPacket[1] = 0x19;
@@ -416,8 +416,8 @@ public class BluetoothConnectionCheckerTests
         transientPacket[3] = 0x0E;
         transientPacket[4] = 0x20;
         transientPacket[5] = 0x00;
-        transientPacket[6] = 0xFF; // Her iki kulaklık da 15 (N/A)
-        transientPacket[7] = 0x0F; // Kutu da 15 (N/A)
+        transientPacket[6] = 0xFF; // Both earbuds are 15 (N/A)
+        transientPacket[7] = 0x0F; // Case is also 15 (N/A)
 
         var result = AppAirPods.ParseAirPodsData(0x112233445566, transientPacket, existing);
 
@@ -440,7 +440,7 @@ public class BluetoothConnectionCheckerTests
             LastUpdated = DateTime.Now
         };
 
-        // Anormal gürültü paketi (%100'den aniden %10'a düşüş)
+        // Abnormal noise packet (sudden drop from 100% to 10%)
         byte[] spikePacket = new byte[27];
         spikePacket[0] = 0x07;
         spikePacket[1] = 0x19;
@@ -448,8 +448,8 @@ public class BluetoothConnectionCheckerTests
         spikePacket[3] = 0x0E;
         spikePacket[4] = 0x20;
         spikePacket[5] = 0x00;
-        spikePacket[6] = 0x13; // Pod A = 1 (%10), Pod B = 3 (%30)
-        spikePacket[7] = 0x08; // Case = 8 (%80)
+        spikePacket[6] = 0x13; // Pod A = 1 (10%), Pod B = 3 (30%)
+        spikePacket[7] = 0x08; // Case = 8 (80%)
 
         var result = AppAirPods.ParseAirPodsData(0x112233445566, spikePacket, existing);
 
@@ -471,7 +471,7 @@ public class BluetoothConnectionCheckerTests
             ProviderSource = "Apple Beacon (BLE)",
             IsLeftCharging = true,
             IsRightCharging = true,
-            IsConnected = true // Yanlışlıkla true olsa bile kutuda şarj olduğu için false dönmeli
+            IsConnected = true // Even if erroneously set to true, should return false because it is charging in the case
         };
 
         bool isConnected = snapshot.IsConnected(airPods);

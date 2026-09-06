@@ -37,7 +37,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Ekran görüntülerini otomatik alma modu
+        // Automated screenshot capture mode
         if (e.Args.Any(a => a.Equals("--capture-screenshots", StringComparison.OrdinalIgnoreCase) ||
                             a.Equals("--screenshot", StringComparison.OrdinalIgnoreCase)))
         {
@@ -46,7 +46,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // 1. Tek Örnek (Single Instance) Kontrolü
+        // 1. Single Instance Check
         bool isNewInstance;
         try
         {
@@ -59,7 +59,7 @@ public partial class App : System.Windows.Application
 
         if (!isNewInstance)
         {
-            // Halihazırda çalışan örneğe Flyout'u açması için izin ve sinyal gönder
+            // Signal the already running instance to bring the Flyout window to foreground
             try
             {
                 NativeMethods.AllowSetForegroundWindow(NativeMethods.ASFW_ANY);
@@ -69,14 +69,14 @@ public partial class App : System.Windows.Application
             }
             catch
             {
-                // Event açılamadıysa sessizce çık
+                // Exit silently if event handle cannot be opened
             }
 
             Shutdown();
             return;
         }
 
-        // İlk kopya: Diğer örneklerden gelecek sinyalleri dinlemek için event oluştur
+        // Primary instance: create wait handle to listen for signals from secondary instances
         try
         {
             _showEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
@@ -88,21 +88,21 @@ public partial class App : System.Windows.Application
         }
         catch
         {
-            // EventWaitHandle oluşturulamazsa devam et
+            // Continue if EventWaitHandle cannot be initialized
         }
 
         base.OnStartup(e);
 
-        // Pencere kapatıldığında uygulamanın kapanmasını engelle (Tepside kalması için)
+        // Prevent app from exiting when windows are closed (runs in system tray)
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        // Global Hata Yakalayıcılar
+        // Global Exception Handlers
         DispatcherUnhandledException += (s, args) =>
         {
             args.Handled = true;
             MessageBox.Show(
-                $"Kritik bir hata oluştu ve uygulama kapatılacak:\n\n{args.Exception.Message}\n\nDetay:\n{args.Exception}",
-                "Bluetooth Pil Monitörü - Hata",
+                $"A critical error occurred and the application will be closed:\n\n{args.Exception.Message}\n\nDetails:\n{args.Exception}",
+                "Bluetooth Battery Monitor - Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             Shutdown(-1);
@@ -112,38 +112,38 @@ public partial class App : System.Windows.Application
         {
             var ex = args.ExceptionObject as Exception;
             MessageBox.Show(
-                $"Beklenmeyen kritik bir hata oluştu:\n\n{ex?.Message}\n\nDetay:\n{ex}",
-                "Bluetooth Pil Monitörü - Kritik Hata",
+                $"An unexpected critical error occurred:\n\n{ex?.Message}\n\nDetails:\n{ex}",
+                "Bluetooth Battery Monitor - Critical Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         };
 
-        // 2. Sistem Servisleri, Tema ve Dil Başlatma
+        // 2. Initialize System Services, Theme, and Localization
         var initialSettings = AppSettings.Load();
         ThemeManager.Initialize();
         LocalizationService.Initialize(initialSettings.Language);
 
-        // 3. Ses Yöneticisi ve Akıllı Yönlendirici (Smart Audio Router)
+        // 3. Audio Endpoint Manager & Smart Audio Router
         _audioEndpointManager = new AudioEndpointManager();
         _smartAudioRouter = new SmartAudioRouter(_audioEndpointManager);
 
-        // 4. Pil Algılama Motoru ve Bildirimler
+        // 4. Battery Telemetry Engine & Notifications
         _notificationService = new ToastNotificationService();
         _engine = new BluetoothBatteryEngine(_notificationService, null, _audioEndpointManager);
         _engine.DevicesUpdated += (s, devices) =>
         {
             _smartAudioRouter?.OnDevicesUpdated(devices, AppSettings.Load());
         };
-        // 5. ViewModel ve Pencereler
+        // 5. ViewModel & Windows
         _mainViewModel = new MainViewModel(_engine, _audioEndpointManager);
         _flyoutWindow = new FlyoutWindow(_mainViewModel);
         MainWindow = _flyoutWindow;
 
-        // 6. Sistem Tepsisi Yöneticisi
+        // 6. System Tray Manager
         _trayIconManager = new TrayIconManager(_mainViewModel, _flyoutWindow);
         _trayIconManager.Initialize();
 
-        // 7. Yerel REST / JSON API Sunucusu (Varsayılan: http://127.0.0.1:23253/devices)
+        // 7. Local REST / JSON API Server (Default: http://127.0.0.1:23253/devices)
         var appSettings = initialSettings;
         _apiServer = new LocalRestApiServer(() => _engine.CurrentDevices, _audioEndpointManager, appSettings.RestApiPort);
         if (appSettings.EnableRestApi)
@@ -175,10 +175,10 @@ public partial class App : System.Windows.Application
             }
         };
 
-        // 8. Motoru Çalıştır
+        // 8. Start Engine
         _engine.Start();
 
-        // Eğer komut satırında --minimized belirtilmemişse, ilk açılışta flyout penceresini göster
+        // Show flyout on initial launch unless --minimized is specified
         bool startMinimized = e.Args.Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
                                               a.Equals("-m", StringComparison.OrdinalIgnoreCase));
         if (!startMinimized)

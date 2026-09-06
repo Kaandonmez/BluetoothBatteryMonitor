@@ -175,7 +175,7 @@ public class DualModeAggregationTests
             BluetoothAddress = 0x998877665544
         };
 
-        // Farklı fiziksel donanım MAC adreslerine sahip cihazlar isimleri benzese dahi asla eşleşmemelidir!
+        // Devices with different physical hardware MAC addresses must never match even if names are similar!
         Assert.False(dev1.Matches(dev2));
         Assert.False(dev2.Matches(dev1));
     }
@@ -206,7 +206,7 @@ public class DualModeAggregationTests
             BluetoothAddress = 0xAABBCCDDEEFF
         };
 
-        // BLE önce gelmiş olsa bile ses yetenekli klasik kart master olmalı
+        // Even if BLE arrived first, the classic audio-capable card should be the master
         var aggregated = AppEngine.AggregateDevices(new[] { bleGattNode, classicAudioNode });
 
         Assert.Single(aggregated);
@@ -221,7 +221,7 @@ public class DualModeAggregationTests
     [Fact]
     public void AggregateDevices_TripleNodeIPhone_MergesIntoSingleCardWithHighResolutionGattBattery()
     {
-        // 1. Düğüm: Windows PnP / HFP (Klasik BR/EDR, kaba %60 pil)
+        // Node 1: Windows PnP / HFP (Classic BR/EDR, coarse 60% battery)
         var hfpNode = new AppDevice
         {
             Id = @"BTHENUM\{0000111f-0000-1000-8000-00805f9b34fb}_VID&0001004c_PID&7613\8&3a358462&0&90ECEAF38843_C00000000",
@@ -233,7 +233,7 @@ public class DualModeAggregationTests
             IsConnected = true
         };
 
-        // 2. Düğüm: Windows PnP (BLE, %93 pil)
+        // Node 2: Windows PnP (BLE, 93% battery)
         var pnpBleNode = new AppDevice
         {
             Id = @"BTHLE\Dev_772f4d139dbd\8&29af66f1&0&772f4d139dbd",
@@ -245,7 +245,7 @@ public class DualModeAggregationTests
             IsConnected = true
         };
 
-        // 3. Düğüm: BLE GATT (GATT Battery Service, %93 pil)
+        // Node 3: BLE GATT (GATT Battery Service, 93% battery)
         var bleGattNode = new AppDevice
         {
             Id = @"BluetoothLE#BluetoothLE00:1a:7d:da:71:13-77:2f:4d:13:9d:bd",
@@ -257,11 +257,11 @@ public class DualModeAggregationTests
             IsConnected = true
         };
 
-        // Farklı geliş sıralarında tekilleştirmeyi test et:
+        // Test deduplication across different arrival orders:
         var aggregatedForward = AppEngine.AggregateDevices(new[] { hfpNode, pnpBleNode, bleGattNode });
         var aggregatedReverse = AppEngine.AggregateDevices(new[] { bleGattNode, pnpBleNode, hfpNode });
 
-        // İleri sıralama doğrulaması
+        // Forward order verification
         Assert.Single(aggregatedForward);
         var cardForward = aggregatedForward.First();
         Assert.Equal("kaan- iPhone’u", cardForward.Name);
@@ -272,7 +272,7 @@ public class DualModeAggregationTests
         Assert.Contains("Windows PnP", cardForward.ProviderSource);
         Assert.Contains("BLE GATT", cardForward.ProviderSource);
 
-        // Geri sıralama doğrulaması
+        // Reverse order verification
         Assert.Single(aggregatedReverse);
         var cardReverse = aggregatedReverse.First();
         Assert.Equal("kaan- iPhone’u", cardReverse.Name);
@@ -283,9 +283,9 @@ public class DualModeAggregationTests
     }
 
     [Theory]
-    [InlineData(60, 93, 93)] // HFP %60 ve BLE GATT %93 -> %93 seçilmeli
-    [InlineData(93, 60, 93)] // BLE GATT %93 ve HFP %60 -> %93 korunmalı
-    [InlineData(40, 47, 47)] // Kaba %40 ve yüksek çözünürlüklü %47 -> %47 seçilmeli
+    [InlineData(60, 93, 93)] // HFP 60% and BLE GATT 93% -> 93% should be selected
+    [InlineData(93, 60, 93)] // BLE GATT 93% and HFP 60% -> 93% should be preserved
+    [InlineData(40, 47, 47)] // Coarse 40% and high-resolution 47% -> 47% should be selected
     public void AggregateDevices_BleGattHighResolution_TakesPrecedenceOverCoarseHfpBattery(int firstLevel, int secondLevel, int expectedLevel)
     {
         var first = new AppDevice
@@ -327,7 +327,7 @@ public class DualModeAggregationTests
         {
             Id = "DEV_BLE",
             Name = "LE-Bose NC 700",
-            BluetoothAddress = 0xAABBCCDDEE01UL // Ardışık donanımsal dual-mode adresi
+            BluetoothAddress = 0xAABBCCDDEE01UL // Adjacent hardware dual-mode address
         };
 
         Assert.True(classic.Matches(ble));
@@ -337,7 +337,7 @@ public class DualModeAggregationTests
     [Fact]
     public void AggregateDevices_DoesNotMergeSeparateMice_WithSameModelNameAndDifferentMacs()
     {
-        // İki farklı fiziksel fare, aynı sağlayıcıdan (PnP) farklı donanım MAC adresleriyle
+        // Two distinct physical mice from same provider (PnP) with different hardware MAC addresses
         var mouse1 = new AppDevice
         {
             Id = "DEV_MOUSE_A",
@@ -389,7 +389,7 @@ public class DualModeAggregationTests
         string uwpId = @"BluetoothLE#BluetoothLE00:1a:7d:da:71:13-77:2f:4d:13:9d:bd";
         ulong extracted = AppDevice.ExtractMacAddress(uwpId);
 
-        // Adaptör MAC'i (00:1a:7d:da:71:13) değil, cihazın asıl MAC'i (77:2f:4d:13:9d:bd) çıkarılmalı!
+        // Must extract actual device MAC (77:2f:4d:13:9d:bd), not adapter MAC (00:1a:7d:da:71:13)!
         Assert.Equal(0x772F4D139DBDUL, extracted);
     }
 
@@ -419,14 +419,14 @@ public class DualModeAggregationTests
         {
             Id = "DEV_BLE_01",
             Name = "iPhone",
-            BatteryLevel = 90, // 10'un tam katı olan yeni değer
+            BatteryLevel = 90, // New value that is an exact multiple of 10
             ProviderSource = "BLE GATT",
             LastUpdated = now.AddMinutes(5)
         };
 
         AppEngine.MergeDualModePair(master, newerUpdate);
 
-        // %10 dilimi olsa dahi daha yeni telemetri geldiğinde pil %90 olarak güncellenmelidir!
+        // Even in 10% steps, battery must update to 90% when newer telemetry arrives!
         Assert.Equal(90, master.BatteryLevel);
 
         var thirdUpdate = new AppDevice
@@ -445,7 +445,7 @@ public class DualModeAggregationTests
     [Fact]
     public void Matches_AdjacentMacAddresses_DoNotMatch_WhenNamesAndTypesDiffer()
     {
-        // Aynı üretici/partiden gelip ardışık MAC almış fare ve klavye (diff = 1 <= 3)
+        // Mouse and keyboard from same manufacturer/batch with adjacent MACs (diff = 1 <= 3)
         var mouse = new AppDevice
         {
             Id = "DEV_MOUSE_001",
@@ -477,7 +477,7 @@ public class DualModeAggregationTests
             Id = "DEV_AIRPODS",
             Name = "AirPods",
             Type = AppDeviceType.Earbuds,
-            BluetoothAddress = 0 // Bilinmeyen MAC
+            BluetoothAddress = 0 // Unknown MAC
         };
 
         var airpodsPro = new AppDevice
@@ -514,11 +514,11 @@ public class DualModeAggregationTests
     [Fact]
     public void ExtractMacAddress_MixedSeparators_PrefersRemoteDeviceOverAdapter()
     {
-        // PC adaptörü iki nokta (00:1a:7d:da:71:13), uzak cihaz tire (77-2f-4d-13-9d-bd) ile ayrılmış
+        // PC adapter separated by colons (00:1a:7d:da:71:13), remote device by dashes (77-2f-4d-13-9d-bd)
         string mixedId = @"BluetoothLE#BluetoothLE00:1a:7d:da:71:13-77-2f-4d-13-9d-bd";
         ulong extracted = AppDevice.ExtractMacAddress(mixedId);
 
-        // Her halükarda dize sonundaki uç cihazın MAC'i (77:2f:4d:13:9d:bd) dönmelidir
+        // In all cases, the end-device MAC (77:2f:4d:13:9d:bd) at the end of the string should be returned
         Assert.Equal(0x772F4D139DBDUL, extracted);
     }
 
