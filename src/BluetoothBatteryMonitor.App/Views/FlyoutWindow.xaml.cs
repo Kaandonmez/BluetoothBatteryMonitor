@@ -20,6 +20,7 @@ public partial class FlyoutWindow : FluentWindow
 
     public bool IsFlyoutOpen => Visibility == Visibility.Visible && !_isHiding;
     public DateTime LastDeactivatedTime => _lastDeactivatedTime;
+    public bool DisableAutoClose { get; set; }
 
     public FlyoutWindow(MainViewModel viewModel)
     {
@@ -263,6 +264,8 @@ public partial class FlyoutWindow : FluentWindow
 
     private void OnWindowDeactivated(object? sender, EventArgs e)
     {
+        if (DisableAutoClose) return;
+
         _lastDeactivatedTime = DateTime.UtcNow;
 
         // Cihaz kartı context menüsü açıksa Flyout'u kapatma

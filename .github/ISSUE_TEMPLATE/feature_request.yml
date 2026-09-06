@@ -1,0 +1,56 @@
+name: ✨ Feature Request
+description: Suggest an idea or enhancement for Bluetooth Battery Monitor
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make Bluetooth Battery Monitor better? We'd love to hear your suggestions!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Missing Need
+      description: Is your feature request related to a problem or limitation?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: "Add an option in settings to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the Application
+      description: What part of the application does this feature affect?
+      options:
+        - "Fluent UI / Flyout Window"
+        - "Dynamic Tray Icon"
+        - "Hardware Telemetry Provider"
+        - "Audio Routing & Codec Detection"
+        - "Local REST API"
+        - "Notifications & Alerts"
+        - "Other"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: willingness_to_contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am interested in contributing code or testing a Pull Request for this feature!

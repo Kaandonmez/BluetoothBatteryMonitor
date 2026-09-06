@@ -1,0 +1,75 @@
+name: 🐛 Bug Report
+description: Report an issue or unexpected behavior in Bluetooth Battery Monitor
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the form below so we can investigate and fix the problem.
+
+  - type: input
+    id: os_version
+    attributes:
+      label: Windows Version & OS Build
+      description: Run `winver` in PowerShell to find your build number.
+      placeholder: "Windows 11 Pro 23H2 (Build 22631.3296)"
+    validations:
+      required: true
+
+  - type: input
+    id: device_info
+    attributes:
+      label: Affected Bluetooth Device(s)
+      description: Name, model, and connection type of the hardware device.
+      placeholder: "e.g. Sony WH-1000XM5, AirPods Pro 2, Logitech MX Master 3S"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When disconnecting and reconnecting my headphones, the battery level does not refresh..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Connect headphones via Bluetooth
+        2. Open the Flyout window
+        3. Turn off headphones and reconnect
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+      placeholder: "The battery percentage should update within 10 seconds of reconnection."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Error Messages
+      description: Paste any error messages or console output here (if applicable).
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have verified this issue occurs on the latest release of Bluetooth Battery Monitor.
+          required: true
+        - label: I have searched existing issues to ensure this is not a duplicate.
+          required: true

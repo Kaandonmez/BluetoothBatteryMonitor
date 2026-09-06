@@ -12,6 +12,7 @@ using BluetoothBatteryMonitor.App.ViewModels;
 using BluetoothBatteryMonitor.App.Views;
 using BluetoothBatteryMonitor.App.Models;
 using BluetoothBatteryMonitor.App.Helpers;
+using BluetoothBatteryMonitor.App.Services;
 
 namespace BluetoothBatteryMonitor.App;
 
@@ -35,6 +36,15 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Ekran görüntülerini otomatik alma modu
+        if (e.Args.Any(a => a.Equals("--capture-screenshots", StringComparison.OrdinalIgnoreCase) ||
+                            a.Equals("--screenshot", StringComparison.OrdinalIgnoreCase)))
+        {
+            base.OnStartup(e);
+            ScreenshotCaptureService.RunAndExit();
+            return;
+        }
+
         // 1. Tek Örnek (Single Instance) Kontrolü
         bool isNewInstance;
         try

@@ -19,6 +19,15 @@ internal static class NativeMethods
         DWMWCP_ROUND = 2,
         DWMWCP_ROUNDSMALL = 3
     }
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+    public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     #endregion
 
     #region Taskbar Position

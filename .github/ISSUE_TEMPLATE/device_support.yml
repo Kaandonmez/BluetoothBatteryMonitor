@@ -1,0 +1,68 @@
+name: 🎧 New Device Protocol Request
+description: Request battery monitoring support for a specific Bluetooth headset, mouse, keyboard, or controller
+title: "[Device Request]: "
+labels: ["device-support", "hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want support for a specific Bluetooth peripheral? Please provide as much hardware information as possible!
+
+  - type: input
+    id: device_name
+    attributes:
+      label: Device Brand & Model
+      description: Exact commercial model name.
+      placeholder: "e.g. Bose QuietComfort 45, Razer DeathAdder V3 Pro, Anker Soundcore Life Q30"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device_type
+    attributes:
+      label: Device Category
+      options:
+        - "TWS Earbuds (Left/Right/Case)"
+        - "Over-Ear Headphones / Headset"
+        - "Wireless Mouse"
+        - "Wireless Keyboard"
+        - "Gamepad / Gaming Controller"
+        - "Bluetooth Speaker"
+        - "Stylus / Pen"
+        - "Smart Watch / Fitness Band"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: hardware_id
+    attributes:
+      label: Hardware / PnP Device ID (from Device Manager)
+      description: Find this in Windows Device Manager -> Bluetooth -> Properties -> Details -> Hardware Ids.
+      placeholder: "e.g. BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}_VID&0001004c_PID&2014"
+    validations:
+      required: false
+
+  - type: input
+    id: mac_address_oui
+    attributes:
+      label: Bluetooth MAC Address or Vendor Prefix (OUI)
+      description: First 3 octets of MAC address (e.g. 00:1B:66:xx:xx:xx) - do NOT share full private MAC if you don't want to.
+      placeholder: "00:1B:66 (Bose Corporation)"
+    validations:
+      required: false
+
+  - type: textarea
+    id: companion_app
+    attributes:
+      label: Official Companion App / Protocol Details
+      description: Does the vendor have a proprietary mobile or desktop app (e.g. Bose Music, Razer Synapse, Logitech G HUB)? Any known reverse-engineered packets?
+      placeholder: "Uses proprietary RFCOMM channel on UUID..."
+
+  - type: checkboxes
+    id: hardware_testing
+    attributes:
+      label: Testing Availability
+      options:
+        - label: I own this hardware device and am available to test preview builds or packet captures.
+          required: true

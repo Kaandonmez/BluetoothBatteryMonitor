@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/Kaandonmez/BluetoothBatteryMonitor/discussions
+    about: Ask questions, share ideas, or showcase your desktop setups with Bluetooth Battery Monitor.
+  - name: 📖 Contribution Guide
+    url: https://github.com/Kaandonmez/BluetoothBatteryMonitor/blob/main/CONTRIBUTING.md
+    about: Read our guidelines for contributing code and adding new battery providers.
+  - name: 🗺️ Project Roadmap
+    url: https://github.com/Kaandonmez/BluetoothBatteryMonitor/blob/main/ROADMAP.md
+    about: See our planned features and upcoming milestones.

@@ -2,42 +2,58 @@
 
 <div align="center">
 
+[![Build & Test](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![UI Framework](https://img.shields.io/badge/UI-Fluent%20Design%20%2F%20Mica-005FB8?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/lepoco/wpfui)
 [![Tests](https://img.shields.io/badge/Tests-253%20Passed-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/actions)
 [![Hardware Protocols](https://img.shields.io/badge/Hardware%20Protocols-36%20Supported-success?style=for-the-badge)]()
+[![GitHub Stars](https://img.shields.io/github/stars/Kaandonmez/BluetoothBatteryMonitor?style=for-the-badge&logo=github&color=gold)](https://github.com/Kaandonmez/BluetoothBatteryMonitor/stargazers)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?style=for-the-badge)](CODE_OF_CONDUCT.md)
 
 **A modern, native Fluent Design desktop application for Windows 10 and Windows 11 that lives in your system tray and provides real-time battery telemetry, audio codec detection, smart routing, and low-power notifications for all your connected Bluetooth and wireless devices.**
 
 [Key Features](#-key-features) •
 [Screenshots](#-screenshots) •
 [Supported Protocols (36 Families)](#-supported-hardware-protocols--device-catalog) •
+[Architecture](#-project-architecture) •
 [Local REST API](#-local-rest-api) •
 [Installation & Building](#-getting-started--building) •
-[Architecture](#-project-architecture)
+[Roadmap](#-roadmap) •
+[How to Contribute](#-how-to-contribute)
 
 </div>
 
 ---
 
-## 📸 Screenshots
+## 📸 Authentic Application Screenshots
+
+> *All screenshots below are captured directly from the live running Windows 11 WPF application (`--capture-screenshots`) with real telemetry rendering — never AI mockups.*
 
 <div align="center">
   <table>
     <tr>
-      <td align="center">
-        <b>Fluent Design Flyout (Taskbar Docked)</b><br/>
-        <img src="docs/screenshots/flyout_preview.jpg" alt="Bluetooth Battery Monitor Flyout Window" width="540" />
-        <br/>
+      <td align="center" width="50%">
+        <b>Fluent Design Flyout (Taskbar Docked)</b><br/><br/>
+        <img src="docs/screenshots/flyout_preview.png" alt="Bluetooth Battery Monitor Flyout Window" width="460" />
+        <br/><br/>
         <em>Real-time battery percentage, TWS (L/R/Case) status, audio codec badge, and volume slider.</em>
       </td>
-      <td align="center">
-        <b>Application & Notification Settings</b><br/>
-        <img src="docs/screenshots/settings_preview.jpg" alt="Bluetooth Battery Monitor Settings Window" width="420" />
-        <br/>
+      <td align="center" width="50%">
+        <b>Application & Notification Settings</b><br/><br/>
+        <img src="docs/screenshots/settings_preview.png" alt="Bluetooth Battery Monitor Settings Window" width="420" />
+        <br/><br/>
         <em>Custom battery alert thresholds, auto audio switching, and local REST API configuration.</em>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" align="center">
+        <b>About & Telemetry Diagnostics Window</b><br/><br/>
+        <img src="docs/screenshots/about_preview.png" alt="Bluetooth Battery Monitor About Window" width="380" />
+        <br/><br/>
+        <em>Version info, open-source MIT license, hardware protocol summary, and repository links.</em>
       </td>
     </tr>
   </table>
@@ -257,12 +273,54 @@ src/BluetoothBatteryMonitor.App/bin/Release/net8.0-windows10.0.19041.0/win-x64/p
 
 ## 🛠️ Project Architecture
 
+```mermaid
+flowchart TD
+    subgraph Hardware [Bluetooth & Wireless Peripherals]
+        H1[Sony WH/WF MDR]
+        H2[Apple AirPods / Beats]
+        H3[Samsung Galaxy Buds]
+        H4[Logitech Unifying / Bolt / G HUB]
+        H5[PlayStation DS4 / DualSense]
+        H6[Nintendo Switch Joy-Con / Pro]
+        H7[SteelSeries Arctis / Nova]
+        H8[Standard BLE GATT BAS 0x180F]
+        H9[Windows PnP / HFP Audio / Xbox]
+    end
+
+    subgraph CoreEngine [BluetoothBatteryEngine & Aggregator]
+        P1[11 Modular Hardware Providers]
+        AGG[MAC & Dual-Mode Aggregator / Deduplicator]
+        CODEC[BluetoothAudioCodecDetector: LDAC, aptX, AAC]
+        ROUTER[SmartAudioRouter & CoreAudio MMDevice]
+        NOTIF[ToastNotificationService & Cooldown Filter]
+    end
+
+    subgraph Presentation [Modern Presentation & Integration]
+        TRAY[Dynamic GDI+ Tray Icon: Tri-Color & Bolt Badge]
+        FLYOUT[Windows 11 Fluent Flyout: Mica & WPF-UI]
+        SETTINGS[Settings Dialog: Custom Thresholds & Port]
+        API[Local REST API Server: http://127.0.0.1:23253/devices]
+    end
+
+    Hardware --> P1
+    P1 --> AGG
+    AGG --> CODEC
+    AGG --> ROUTER
+    AGG --> NOTIF
+    AGG --> TRAY
+    AGG --> FLYOUT
+    AGG --> SETTINGS
+    AGG --> API
+```
+
+### Directory Structure
+
 ```
 BluetoothBatteryMonitor/
 ├── BluetoothBatteryMonitor.sln
 ├── src/
 │   ├── BluetoothBatteryMonitor.App/                   # Main Modern Fluent Design WPF Application
-│   │   ├── App.xaml & App.xaml.cs                     # Single-Instance Mutex, IPC, lifecycle management
+│   │   ├── App.xaml & App.xaml.cs                     # Single-Instance Mutex, IPC, screenshot CLI
 │   │   ├── app.manifest                              # High-DPI (PerMonitorV2) & Windows 10/11 compatibility
 │   │   ├── Models/
 │   │   │   ├── AppSettings.cs                        # User configuration & persistent JSON storage
@@ -291,6 +349,7 @@ BluetoothBatteryMonitor/
 │   │   │   │   └── SteelSeriesBatteryProvider.cs     # Arctis & Nova HID telemetry (0xB0/0x00)
 │   │   │   ├── Notification/
 │   │   │   │   └── ToastNotificationService.cs       # Native Windows toast alerts with threshold limits
+│   │   │   ├── ScreenshotCaptureService.cs           # Automated real-window screenshot generation engine
 │   │   │   ├── System/
 │   │   │   │   ├── StartupManager.cs                 # HKCU Run registry manager for auto-start
 │   │   │   │   ├── TaskbarPositionHelper.cs          # Multi-monitor taskbar docking coordinate calculator
@@ -309,8 +368,50 @@ BluetoothBatteryMonitor/
 ├── tests/
 │   └── BluetoothBatteryMonitor.Tests/                # 253 xUnit unit and integration tests
 └── docs/
-    └── screenshots/                                  # High-resolution application preview assets
+    └── screenshots/                                  # Real, authentic application window screenshots
 ```
+
+---
+
+## 🗺️ Roadmap
+
+See our complete [ROADMAP.md](ROADMAP.md) for detailed milestone breakdowns. Key upcoming highlights:
+
+- [x] **v1.0.0 (Current):** 11 native telemetry providers (36 device families), Windows 11 Fluent UI, GDI+ Tray icon, TWS multi-battery indicators, Codec detection, REST API, 253 unit tests.
+- [ ] **v1.1.0 (Q4 2026):** Historical battery discharge sparklines, remaining battery life estimator (%/hour), Bose QC / JBL / Marshall protocol additions, multi-language localization.
+- [ ] **v1.2.0 (Q1 2027):** Native Windows 11 Widget Board provider (`Win + W`), Home Assistant / Discord Webhook alerts, official Stream Deck plugin.
+- [ ] **v2.0.0 (Long-Term):** Smartphone battery sync over local BLE without cloud servers, multi-PC peer synchronization.
+
+---
+
+## 🤝 How to Contribute
+
+Contributions are what make the open-source community an amazing place to learn, inspire, and create! Any contributions you make are **greatly appreciated**.
+
+1. Check our **[Contributing Guide](CONTRIBUTING.md)** for coding standards, commit rules, and architecture guidelines.
+2. Browse open issues with the [`good first issue`](https://github.com/Kaandonmez/BluetoothBatteryMonitor/labels/good%20first%20issue) or [`help wanted`](https://github.com/Kaandonmez/BluetoothBatteryMonitor/labels/help%20wanted) labels.
+3. Want to add a new device? Use our **[New Device Support Request](https://github.com/Kaandonmez/BluetoothBatteryMonitor/issues/new?template=device_support.yml)**.
+4. Found a bug? File a detailed report using the **[Bug Report Form](https://github.com/Kaandonmez/BluetoothBatteryMonitor/issues/new?template=bug_report.yml)**.
+5. Submit a Pull Request following the provided PR checklist.
+
+---
+
+## 🌟 Star History
+
+If you love **Bluetooth Battery Monitor**, give us a star on GitHub! It helps more Windows users discover the project and keeps development active:
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Kaandonmez/BluetoothBatteryMonitor&type=Date)](https://star-history.com/#Kaandonmez/BluetoothBatteryMonitor&Date)
+
+</div>
+
+---
+
+## 🏷️ Community & Discovery Topics
+
+To help developers and users find this project on GitHub, we maintain a curated list of tags in [`.github/TOPICS.md`](.github/TOPICS.md):
+`windows-11`, `bluetooth`, `battery-monitor`, `fluent-design`, `wpf`, `dotnet8`, `csharp`, `system-tray`, `airpods-windows`, `galaxy-buds`, `sony-headphones`, `logitech-ghub`, `rest-api`, `open-source`.
 
 ---
 
@@ -321,5 +422,5 @@ This project is licensed under the [MIT License](LICENSE). Feel free to use, mod
 ---
 
 <div align="center">
-  <sub>Crafted with ❤️ for Windows 10 & 11 users.</sub>
+  <sub>Crafted with ❤️ for Windows 10 & 11 users worldwide. • Proudly Open Source</sub>
 </div>
