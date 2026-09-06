@@ -1,0 +1,44 @@
+## Build and Output Folders
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Tt]emp/
+[Tt]est[Rr]esults/
+
+## Visual Studio & Rider
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.launchSettings.json
+
+## NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.assets.json
+
+## Reverse Engineering / Research raw string dumps
+driver_strings.txt
+svc_strings.txt
+faq_text.txt
+
+## OS Generated Files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+.DS_Store
+
+## Temporary Files
+auth_*.ps1
+*.tmp
+*.bak
+*.swp
+*~

@@ -1,0 +1,542 @@
+<ui:FluentWindow x:Class="BluetoothBatteryMonitor.App.Views.FlyoutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:vm="clr-namespace:BluetoothBatteryMonitor.App.ViewModels"
+        mc:Ignorable="d"
+        Title="Bluetooth Pil Monitörü"
+        Width="416"
+        MaxHeight="660"
+        SizeToContent="Height"
+        WindowStyle="None"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Deactivated="OnWindowDeactivated">
+
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </ui:FluentWindow.Resources>
+
+    <!-- Ana Kart Çerçevesi (Windows 11 Tarzı Akrilik / Yuvarlak Köşeli) -->
+    <Border CornerRadius="12"
+            BorderThickness="1"
+            BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            Padding="0"
+            Margin="6">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20"
+                              ShadowDepth="4"
+                              Direction="270"
+                              Opacity="0.25"
+                              Color="#000000" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /> <!-- Başlık & Durum Çubuğu -->
+                <RowDefinition Height="*" />    <!-- Cihaz Listesi -->
+                <RowDefinition Height="Auto" /> <!-- Boş Durum (Empty State) -->
+                <RowDefinition Height="Auto" /> <!-- Alt Araç Çubuğu -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. Başlık Çubuğu -->
+            <Border Grid.Row="0"
+                    Padding="16,14,16,10"
+                    BorderThickness="0,0,0,1"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="Bluetooth24"
+                                           FontSize="20"
+                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                           Margin="0,0,8,0" />
+                            <TextBlock Text="Bluetooth Cihazları"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding StatusText}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="28,2,0,0" />
+                    </StackPanel>
+
+                    <!-- Yenile Butonu -->
+                    <ui:Button Grid.Column="1"
+                               Appearance="Secondary"
+                               Icon="{ui:SymbolIcon ArrowClockwise24}"
+                               ToolTip="Cihazları Yenile"
+                               Command="{Binding RefreshDevicesAsyncCommand}"
+                               VerticalAlignment="Center"
+                               Padding="8,6" />
+                </Grid>
+            </Border>
+
+            <!-- 2. Cihaz Listesi -->
+            <ScrollViewer x:Name="DeviceScrollViewer"
+                          Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          MaxHeight="500"
+                          Padding="12,8">
+                <ItemsControl ItemsSource="{Binding Devices}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DeviceItemViewModel}">
+                            <!-- Cihaz Kartı -->
+                            <Border Margin="0,4,0,6"
+                                    Padding="14,12"
+                                    CornerRadius="8"
+                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                    UseLayoutRounding="True"
+                                    SnapsToDevicePixels="True">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Opacity" Value="1.0" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                <Setter Property="Opacity" Value="0.65" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Özel Pil Eşiği Belirle" IsEnabled="False" FontWeight="Bold" />
+                                        <Separator />
+                                        <MenuItem Header="Varsayılan Eşik (Global)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThresholdDefault, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="0" />
+                                        <Separator />
+                                        <MenuItem Header="%10 (Fare / Düşük Tüketim)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold10, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="10" />
+                                        <MenuItem Header="%15"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold15, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="15" />
+                                        <MenuItem Header="%20 (Standart Kulaklık)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold20, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="20" />
+                                        <MenuItem Header="%25"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold25, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="25" />
+                                        <MenuItem Header="%30"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold30, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="30" />
+                                        <MenuItem Header="%40 (Erken Uyarı)"
+                                                  IsCheckable="True"
+                                                  IsChecked="{Binding IsThreshold40, Mode=OneWay}"
+                                                  Command="{Binding SetThresholdCommand}"
+                                                  CommandParameter="40" />
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Üst Satır: İkon, Ad, Pil Yüzdesi, Şarj -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" /> <!-- İkon -->
+                                            <ColumnDefinition Width="*" />    <!-- Ad ve Durum -->
+                                            <ColumnDefinition Width="Auto" /> <!-- Pil Yüzdesi & Şimşek -->
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Cihaz İkonu ve Bağlantı Rozeti -->
+                                        <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <Border Width="36" Height="36"
+                                                    CornerRadius="18"
+                                                    Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                                                <ui:SymbolIcon Symbol="{Binding IconSymbol}"
+                                                                FontSize="20"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </Border>
+                                            <!-- Bağlantı Durumu Rozeti -->
+                                            <Ellipse Width="10" Height="10"
+                                                     HorizontalAlignment="Right"
+                                                     VerticalAlignment="Bottom"
+                                                     Stroke="{DynamicResource ApplicationBackgroundBrush}"
+                                                     StrokeThickness="1.5">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="#10B981" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                <Setter Property="Fill" Value="#9CA3AF" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                        </Grid>
+
+                                        <!-- Cihaz Adı, Ses Kodeki ve Kaynak -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,3">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="13.5"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                           VerticalAlignment="Center"
+                                                           MaxWidth="175" />
+
+                                                <!-- Ses Kodeki Rozeti (LDAC, aptX HD, aptX, AAC, SBC) -->
+                                                <Border Margin="6,0,0,0"
+                                                        Padding="5,1"
+                                                        CornerRadius="4"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding HasAudioCodec, Converter={StaticResource BoolToVis}}"
+                                                        ToolTip="{Binding AudioCodecToolTip}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <!-- Varsayılan (AAC vb.): Şık camgöbeği/mavi akrilik rozet -->
+                                                            <Setter Property="Background" Value="#1A0078D4" />
+                                                            <Setter Property="BorderBrush" Value="#4D0078D4" />
+                                                            <Setter Property="BorderThickness" Value="1" />
+                                                            <Style.Triggers>
+                                                                <!-- LDAC: Özel Yüksek Çözünürlüklü Altın / Amber rozet -->
+                                                                <DataTrigger Binding="{Binding AudioCodec}" Value="LDAC">
+                                                                    <Setter Property="Background" Value="#26E5A00D" />
+                                                                    <Setter Property="BorderBrush" Value="#66E5A00D" />
+                                                                </DataTrigger>
+                                                                <!-- aptX HD: Özel Mor / Indigo rozet -->
+                                                                <DataTrigger Binding="{Binding AudioCodec}" Value="aptX HD">
+                                                                    <Setter Property="Background" Value="#268764B8" />
+                                                                    <Setter Property="BorderBrush" Value="#668764B8" />
+                                                                </DataTrigger>
+                                                                <!-- aptX: Mavi / Mor rozet -->
+                                                                <DataTrigger Binding="{Binding AudioCodec}" Value="aptX">
+                                                                    <Setter Property="Background" Value="#265C2D91" />
+                                                                    <Setter Property="BorderBrush" Value="#665C2D91" />
+                                                                </DataTrigger>
+                                                                <!-- SBC: Standart gri / nötr rozet -->
+                                                                <DataTrigger Binding="{Binding AudioCodec}" Value="SBC">
+                                                                    <Setter Property="Background" Value="#1A8A8886" />
+                                                                    <Setter Property="BorderBrush" Value="#4D8A8886" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding AudioCodec}"
+                                                               FontSize="9.5"
+                                                               FontWeight="Bold"
+                                                               VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding AudioCodec}" Value="LDAC">
+                                                                        <Setter Property="Foreground" Value="#E5A00D" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding AudioCodec}" Value="aptX HD">
+                                                                        <Setter Property="Foreground" Value="#9E7CD4" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding AudioCodec}" Value="aptX">
+                                                                        <Setter Property="Foreground" Value="#7E57C2" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding AudioCodec}" Value="SBC">
+                                                                        <Setter Property="Foreground" Value="#9CA3AF" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock TextTrimming="CharacterEllipsis">
+                                                <Run Text="{Binding ConnectionStatusText, Mode=OneWay}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <Run Text=" • "
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                <Run Text="{Binding ProviderSource, Mode=OneWay}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                <Run Text="{Binding CustomThresholdBadgeText, Mode=OneWay}"
+                                                     FontSize="11"
+                                                     FontWeight="SemiBold"
+                                                     Foreground="#F59E0B" />
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- Pil Yüzdesi ve Şarj Simgesi -->
+                                        <StackPanel Grid.Column="2"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="8,0,0,0">
+                                            <!-- Şarj İkonu -->
+                                            <ui:SymbolIcon Symbol="Flash24"
+                                                           FontSize="16"
+                                                           Foreground="#00A4EF"
+                                                           Margin="0,0,4,0"
+                                                           Visibility="{Binding IsCharging, Converter={StaticResource BoolToVis}}" />
+                                            <!-- Yüzde Metni -->
+                                            <TextBlock Text="{Binding BatteryText}"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       Foreground="{Binding BatteryBrush}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Orta Satır: Ana Pil İlerleme Çubuğu (TWS olmayan tekli piller için) -->
+                                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTws}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding HasBattery}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <ProgressBar Value="{Binding BatteryProgress}"
+                                                     Maximum="100"
+                                                     Height="6"
+                                                     Foreground="{Binding BatteryBrush}"
+                                                     Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                                    </Grid>
+
+                                    <!-- TWS Paneli (AirPods / True Wireless Ayrı Sol, Sağ ve Kutu Göstergeleri) -->
+                                    <Border Grid.Row="1"
+                                            Margin="0,10,0,0"
+                                            Padding="8,6"
+                                            CornerRadius="6"
+                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                            Visibility="{Binding IsTws, Converter={StaticResource BoolToVis}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Sol Kulaklık -->
+                                            <StackPanel Grid.Column="0" Margin="4,0" HorizontalAlignment="Stretch">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="L: " FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding LeftBatteryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                    <ui:SymbolIcon Symbol="Flash16" FontSize="11" Foreground="#00A4EF" Margin="3,0,0,0"
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding IsLeftCharging, Converter={StaticResource BoolToVis}}" />
+                                                </StackPanel>
+                                                <ProgressBar Value="{Binding LeftBatteryProgress}" Maximum="100" Height="4" Margin="0,4,0,0"
+                                                             HorizontalAlignment="Stretch" Foreground="{Binding BatteryBrush}"
+                                                             Visibility="{Binding HasLeftBattery, Converter={StaticResource BoolToVis}}" />
+                                            </StackPanel>
+
+                                            <!-- Kutu (Case) -->
+                                            <StackPanel Grid.Column="1" Margin="4,0" HorizontalAlignment="Stretch">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="Kutu: " FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding CaseBatteryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                    <ui:SymbolIcon Symbol="Flash16" FontSize="11" Foreground="#00A4EF" Margin="3,0,0,0"
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding IsCaseCharging, Converter={StaticResource BoolToVis}}" />
+                                                </StackPanel>
+                                                <ProgressBar Value="{Binding CaseBatteryProgress}" Maximum="100" Height="4" Margin="0,4,0,0"
+                                                             HorizontalAlignment="Stretch" Foreground="{Binding BatteryBrush}"
+                                                             Visibility="{Binding HasCaseBattery, Converter={StaticResource BoolToVis}}" />
+                                            </StackPanel>
+
+                                            <!-- Sağ Kulaklık -->
+                                            <StackPanel Grid.Column="2" Margin="4,0" HorizontalAlignment="Stretch">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="R: " FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding RightBatteryText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                    <ui:SymbolIcon Symbol="Flash16" FontSize="11" Foreground="#00A4EF" Margin="3,0,0,0"
+                                                                   VerticalAlignment="Center"
+                                                                   Visibility="{Binding IsRightCharging, Converter={StaticResource BoolToVis}}" />
+                                                </StackPanel>
+                                                <ProgressBar Value="{Binding RightBatteryProgress}" Maximum="100" Height="4" Margin="0,4,0,0"
+                                                             HorizontalAlignment="Stretch" Foreground="{Binding BatteryBrush}"
+                                                             Visibility="{Binding HasRightBattery, Converter={StaticResource BoolToVis}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 3. Satır: Ses Düzeyi ve Mute Kontrolü (Quick Volume Control) -->
+                                    <Border Grid.Row="2"
+                                            Margin="0,8,0,0"
+                                            Padding="8,4"
+                                            CornerRadius="6"
+                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                            Visibility="{Binding HasAudioEndpoint, Converter={StaticResource BoolToVis}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="38" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Sessize Alma (Mute) Butonu -->
+                                            <ui:Button Grid.Column="0"
+                                                       Appearance="Transparent"
+                                                       Padding="4,2"
+                                                       Command="{Binding ToggleMuteCommand}"
+                                                       ToolTip="Sesi Aç / Kapat"
+                                                       VerticalAlignment="Center">
+                                                <ui:SymbolIcon FontSize="15" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                                    <ui:SymbolIcon.Style>
+                                                        <Style TargetType="ui:SymbolIcon">
+                                                            <Setter Property="Symbol" Value="Speaker224" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                                                    <Setter Property="Symbol" Value="SpeakerMute24" />
+                                                                    <Setter Property="Foreground" Value="#EF4444" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ui:SymbolIcon.Style>
+                                                </ui:SymbolIcon>
+                                            </ui:Button>
+
+                                            <!-- Ses Kaydırıcısı (Slider) -->
+                                            <Slider Grid.Column="1"
+                                                    Minimum="0"
+                                                    Maximum="100"
+                                                    Value="{Binding VolumePercent, Mode=TwoWay}"
+                                                    SmallChange="1"
+                                                    LargeChange="5"
+                                                    VerticalAlignment="Center"
+                                                    Margin="6,0" />
+
+                                            <!-- Ses Yüzdesi Metni -->
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding VolumePercent, StringFormat='{}{0}%'}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 3. Boş Durum (Cihaz Yokken) -->
+            <Border Grid.Row="2"
+                    Padding="24,32"
+                    HorizontalAlignment="Center">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasDevices}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="BluetoothDisabled24"
+                                   FontSize="36"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,10" />
+                    <TextBlock Text="Bağlı Bluetooth Cihazı Yok"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="Bluetooth cihazınızı açın ve bilgisayarınıza bağlayın."
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               MaxWidth="260"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- 4. Alt Araç Çubuğu (Footer) -->
+            <Border Grid.Row="3"
+                    Padding="14,10"
+                    BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                    CornerRadius="0,0,11,11">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Windows Bluetooth Ayarları Hızlı Bağlantı -->
+                    <ui:Button Grid.Column="0"
+                               Appearance="Transparent"
+                               Icon="{ui:SymbolIcon Settings24}"
+                               Content="Bluetooth Ayarları"
+                               FontSize="12"
+                               Command="{Binding OpenBluetoothSettingsCommand}"
+                               HorizontalAlignment="Left"
+                               Padding="6,4" />
+
+                    <!-- Uygulama Ayarları Butonu -->
+                    <ui:Button Grid.Column="1"
+                               Appearance="Transparent"
+                               Icon="{ui:SymbolIcon Options24}"
+                               ToolTip="Uygulama Ayarları"
+                               Command="{Binding OpenAppSettingsCommand}"
+                               Margin="4,0"
+                               Padding="6,4" />
+
+                    <!-- Kapat Butonu -->
+                    <ui:Button Grid.Column="2"
+                               Appearance="Transparent"
+                               Icon="{ui:SymbolIcon Dismiss24}"
+                               ToolTip="Gizle"
+                               Click="OnCloseClick"
+                               Padding="6,4" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</ui:FluentWindow>

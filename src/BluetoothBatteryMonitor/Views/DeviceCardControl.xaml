@@ -1,0 +1,187 @@
+<UserControl x:Class="BluetoothBatteryMonitor.Views.DeviceCardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:viewmodels="clr-namespace:BluetoothBatteryMonitor.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=viewmodels:DeviceCardViewModel}"
+             d:DesignWidth="360">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#2D2D2D" />
+            <Setter Property="BorderBrush" Value="#404040" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#383838" />
+                    <Setter Property="BorderBrush" Value="#555555" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+            <Setter Property="Fill" Value="#8A8886" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                    <Setter Property="Fill" Value="#22C55E" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FluentBatteryProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="5" />
+            <Setter Property="Background" Value="#3B3B3B" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid x:Name="TemplateRoot">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="2.5" />
+                            <Border x:Name="PART_Track" />
+                            <Border x:Name="PART_Indicator" 
+                                    HorizontalAlignment="Left" 
+                                    Background="{TemplateBinding Foreground}" 
+                                    CornerRadius="2.5" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource CardBorderStyle}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Üst Satır: İkon, Cihaz Adı, Pil Yüzdesi -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Cihaz Tipi İkon Rozeti -->
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="8" Background="#3B3B3B" Margin="0,0,10,0">
+                    <TextBlock Text="{Binding Glyph}" 
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol"
+                               FontSize="18"
+                               Foreground="#E0E0E0"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <!-- Cihaz Adı ve Bağlantı Durumu -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" 
+                               FontWeight="SemiBold" 
+                               FontSize="13.5" 
+                               Foreground="#FFFFFF" 
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <Ellipse Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ConnectionStatusText}" 
+                                   FontSize="11" 
+                                   Foreground="#A0A0A0" />
+                        <TextBlock Text=" • " FontSize="11" Foreground="#666666" />
+                        <TextBlock Text="{Binding ProviderSource}" 
+                                   FontSize="10.5" 
+                                   Foreground="#777777" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Pil Yüzdesi ve Şarj Simgesi -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <!-- Şarj ediliyorsa Şimşek Simgesi -->
+                    <TextBlock Text="⚡" 
+                               Foreground="#EAB308" 
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,4,0"
+                               Visibility="{Binding IsCharging, Converter={StaticResource BoolToVis}}" />
+                    
+                    <TextBlock Text="{Binding BatteryLevelText}" 
+                               FontSize="15" 
+                               FontWeight="Bold" 
+                               Foreground="{Binding StatusColor}" 
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Alt Satır: Standart Pil Çubuğu VEYA TWS Ayrıntıları -->
+            <Grid Grid.Row="1" Margin="0,8,0,0">
+                
+                <!-- Standart Tekli Pil Progress Bar (TWS Olmayan Cihazlar) -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTws}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+
+                    <ProgressBar Value="{Binding BatteryLevel}" 
+                                 Maximum="100" 
+                                 Minimum="0" 
+                                 Foreground="{Binding StatusColor}" 
+                                 Style="{StaticResource FluentBatteryProgressBarStyle}" />
+                </Grid>
+
+                <!-- TWS Çoklu Pil Gösterimi (Sol, Sağ, Kutu) -->
+                <Grid Visibility="{Binding IsTws, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Sol Kulaklık -->
+                    <Border Grid.Column="0" Background="#353535" CornerRadius="6" Padding="6,4" Margin="0,0,4,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Sol: " FontSize="11" Foreground="#A0A0A0" />
+                            <TextBlock Text="{Binding LeftLevelText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                            <TextBlock Text=" ⚡" FontSize="10" Foreground="#EAB308" Visibility="{Binding IsLeftCharging, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sağ Kulaklık -->
+                    <Border Grid.Column="1" Background="#353535" CornerRadius="6" Padding="6,4" Margin="2,0,2,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Sağ: " FontSize="11" Foreground="#A0A0A0" />
+                            <TextBlock Text="{Binding RightLevelText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                            <TextBlock Text=" ⚡" FontSize="10" Foreground="#EAB308" Visibility="{Binding IsRightCharging, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Şarj Kutusu -->
+                    <Border Grid.Column="2" Background="#353535" CornerRadius="6" Padding="6,4" Margin="4,0,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Kutu: " FontSize="11" Foreground="#A0A0A0" />
+                            <TextBlock Text="{Binding CaseLevelText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF" />
+                            <TextBlock Text=" ⚡" FontSize="10" Foreground="#EAB308" Visibility="{Binding IsCaseCharging, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

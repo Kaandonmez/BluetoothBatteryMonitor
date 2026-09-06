@@ -1,0 +1,128 @@
+<ui:FluentWindow x:Class="BluetoothBatteryMonitor.App.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        Title="Hakkında - Bluetooth Pil Monitörü"
+        Width="460"
+        Height="540"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True">
+
+    <Grid Margin="24,20,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Üst Başlık ve Logo -->
+        <StackPanel Grid.Row="0" Margin="0,10,0,16" HorizontalAlignment="Center">
+            <Border Width="64" Height="64"
+                    CornerRadius="32"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,12">
+                <ui:SymbolIcon Symbol="Bluetooth24"
+                               FontSize="36"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+            </Border>
+
+            <TextBlock Text="Bluetooth Pil Monitörü"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                        Padding="8,2"
+                        CornerRadius="4">
+                    <TextBlock Text="Sürüm 1.0.0 (x64)"
+                               FontSize="12"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- İçerik Kartı -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+            <StackPanel>
+                <Border Margin="0,0,0,12"
+                        Padding="16,14"
+                        CornerRadius="8"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Genel Bakış"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,6" />
+                        <TextBlock Text="Windows 10 ve Windows 11 için modern Fluent Design arayüzüne sahip, bağlı Bluetooth cihazlarınızın (kulaklık, fare, klavye, oyun kolları) pil seviyelerini ve ses durumlarını gerçek zamanlı gösteren masaüstü aracı."
+                                   FontSize="12.5"
+                                   LineHeight="18"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,0,0,12"
+                        Padding="16,14"
+                        CornerRadius="8"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Öne Çıkan Özellikler"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8" />
+
+                        <TextBlock Text="• 36 Donanım Protokolü: AirPods, Galaxy Buds, Sony MDR, Logitech HID++/LIGHTSPEED, DualSense, Joy-Con vb."
+                                   FontSize="12"
+                                   Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="• Dinamik Sistem Tepsisi Simgesi (GDI+ pil seviyesi çizimi)"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="• Windows Toast Bildirimleri (Kritik ve Düşük pil alarmları)"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="• Akıllı Ses Yönlendirici &amp; Kodek Tespiti (LDAC, aptX HD, AAC, SBC)"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="• Yerel REST / JSON API (Üçüncü parti entegrasyonlar)"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Alt Butonlar -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <TextBlock Text="© 2026 Bluetooth Battery Monitor"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+            <Button Content="Tamam"
+                    HorizontalAlignment="Right"
+                    Click="OnCloseClick"
+                    Padding="24,6" />
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
